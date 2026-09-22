@@ -1,0 +1,9 @@
+# Build output — generated, never committed
+build/
+cmake-build-*/
+
+# CLion / JetBrains project settings
+.idea/
+
+# macOS
+.DS_Store
