@@ -39,15 +39,15 @@ add_subdirectory(libs/JUCE)
 juce_add_plugin(SimpleGain
 
     # --- Identity -------------------------------------------------------
-    COMPANY_NAME                "Millie Audio"
-    BUNDLE_ID                   "com.millieaudio.simplegain"
+    COMPANY_NAME                "Maxximum Displacement"
+    BUNDLE_ID                   "com.maxximumdisplacement.simplegain"
 
     # Four-character codes that uniquely identify you and this plugin.
     # These are an ancient Apple convention and the rules are strict:
     #   MANUFACTURER: first letter uppercase, rest lowercase.
     #   PLUGIN_CODE:  EXACTLY one uppercase letter, first letter uppercase.
     # Break these and the plugin builds fine but GarageBand silently ignores it.
-    PLUGIN_MANUFACTURER_CODE    Mlli
+    PLUGIN_MANUFACTURER_CODE    Mxdp
     PLUGIN_CODE                 Sgai
 
     # --- What kind of plugin is this? -----------------------------------
