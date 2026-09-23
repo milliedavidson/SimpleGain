@@ -1,0 +1,49 @@
+# =============================================================================
+#  Build & validate SimpleGain on every push and pull request.
+# =============================================================================
+#  This replaces the auto-generated "C/C++ CI" starter, which assumed GNU
+#  Autotools (./configure && make) and a Linux runner — neither applies here.
+#  SimpleGain builds with CMake, and the AU format only exists on macOS, so
+#  this workflow runs on a macOS runner and mirrors exactly what we do by
+#  hand locally: configure, build all three formats, then validate the AU
+#  with Apple's own auval — the same check Logic performs before it will
+#  load the plugin at all.
+# =============================================================================
+
+name: Build & Validate
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    # macos-latest currently means an Apple Silicon (arm64) runner. That's
+    # fine — CMake builds natively for whatever architecture it's running
+    # on, so this just builds an arm64 binary rather than the x86_64 one we
+    # build locally on Intel. Both are valid; neither is "the real one".
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out SimpleGain (with the JUCE submodule)
+        uses: actions/checkout@v4
+        with:
+          # JUCE is a git submodule, not committed code. Without this, the
+          # checkout leaves libs/JUCE empty and CMake fails with a confusing
+          # error rather than an obvious "JUCE not found" — the same trap
+          # covered in dev-workflow-and-tooling.md.
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Standalone, AU and VST3
+        run: cmake --build build --target SimpleGain_Standalone SimpleGain_AU SimpleGain_VST3 -j 4
+
+      - name: Validate the AU with Apple's auval
+        # The same command run locally: auval -v aufx <PLUGIN_CODE> <MANUFACTURER_CODE>
+        # from CMakeLists.txt. If this fails, Logic would refuse to load the
+        # plugin too — so a red X here means something genuinely broke.
+        run: auval -v aufx Sgai Mxdp
