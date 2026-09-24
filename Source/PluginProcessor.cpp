@@ -12,6 +12,75 @@
 
 
 //==============================================================================
+//  Parameters
+//==============================================================================
+juce::AudioProcessorValueTreeState::ParameterLayout
+    SimpleGainAudioProcessor::createParameterLayout()
+{
+    // ParameterLayout is a container the APVTS takes ownership of. We fill it
+    // with parameters and hand it over.
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    // ----------------------------------------------------------------------
+    // The gain parameter, measured in DECIBELS.
+    //
+    // Why dB and not a raw 0.0-2.0 multiplier? Because hearing is logarithmic.
+    // Going 0.5 -> 1.0 and 1.0 -> 2.0 sound like equal-sized jumps in loudness
+    // even though one adds 0.5 and the other adds 1.0. Decibels measure
+    // *ratios*, so a fader in dB feels evenly spaced to a human ear.
+    // ----------------------------------------------------------------------
+
+    // NormalisableRange maps the range the USER sees (-60..+12 dB) onto the
+    // 0.0-1.0 range every plugin host actually works in internally.
+    //
+    //   arg 1, 2 : minimum and maximum, in dB
+    //   arg 3    : step size — the fader moves in 0.1 dB increments
+    //
+    // A note on "skew": JUCE lets you bend this mapping so one end of the
+    // fader gets more travel. We deliberately DON'T here. Skew exists for
+    // parameters measured in linear units — frequency in Hz, or a raw gain
+    // multiplier — where a plain linear fader feels wrong. Our parameter is
+    // already in dB, which IS a logarithmic scale, so it's already
+    // perceptually even. Adding skew would effectively apply the log twice.
+    juce::NormalisableRange<float> gainRange { -60.0f, 12.0f, 0.1f };
+
+    layout.add (std::make_unique<juce::AudioParameterFloat> (
+        // The stable ID we look this parameter up by, in code and in saved
+        // state. The `1` is a "version hint": if you ever reorganise
+        // parameters in a future release, bumping this tells AU/VST3 hosts how
+        // to keep old saved projects working. It must never change for an
+        // existing parameter.
+        juce::ParameterID { "gain", 1 },
+
+        "Gain",          // the human-readable name the DAW displays
+        gainRange,
+        0.0f,            // default: 0 dB — i.e. unity, no change to the signal
+
+        // Attributes are optional extras, built up with a chain of `with...`
+        // calls. Each returns a NEW object rather than modifying in place —
+        // the same immutable-builder style as C#'s `with` expressions on
+        // records.
+        juce::AudioParameterFloatAttributes()
+            .withLabel ("dB")
+            // A LAMBDA — C++'s anonymous function. `[]` is the capture list:
+            // C# closures capture variables implicitly, but C++ makes you
+            // state what you're capturing, because lifetimes are manual and
+            // capturing something that later dies is a real bug. Empty `[]`
+            // means "capture nothing", which is exactly right here — this
+            // outlives us, so it must not hold references to anything local.
+            //
+            // It converts the raw float into what the host displays, so you
+            // get "-6.0 dB" instead of "-6.000000".
+            .withStringFromValueFunction ([] (float valueInDb, int)
+            {
+                return juce::String (valueInDb, 1) + " dB";
+            })));
+
+    return layout;
+}
+
+
+//==============================================================================
 //  Constructor
 //==============================================================================
 SimpleGainAudioProcessor::SimpleGainAudioProcessor()
@@ -32,9 +101,27 @@ SimpleGainAudioProcessor::SimpleGainAudioProcessor()
                         // Default to stereo in, stereo out. The host may later
                         // negotiate mono via isBusesLayoutSupported().
                         .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true))
+                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
+      // Construct the parameter state. Note this runs AFTER the AudioProcessor
+      // base class above — members are initialised in declaration order, and
+      // the base class always goes first.
+      //
+      //   *this           : the processor these parameters belong to
+      //   nullptr         : no UndoManager (we don't need undo)
+      //   "PARAMETERS"    : the XML tag name used when state is saved
+      //   createParameterLayout() : the parameters themselves
+      apvts (*this, nullptr, "PARAMETERS", createParameterLayout())
 {
-    // Constructor body. Nothing to do yet — parameters arrive in the next step.
+    // Cache the pointer to the gain value ONCE, here, where it's safe to do
+    // slow things. See the comment on gainDbParameter in the header for why
+    // this matters so much.
+    gainDbParameter = apvts.getRawParameterValue ("gain");
+
+    // A sanity check that costs nothing in a Release build. If the ID above
+    // and the ID in createParameterLayout() ever drift apart, this fires
+    // immediately in the debugger rather than silently giving us a null
+    // pointer to crash on later. It's the C++ equivalent of Debug.Assert.
+    jassert (gainDbParameter != nullptr);
 }
 
 // The destructor. Empty, because we own nothing that needs manual cleanup —
@@ -114,6 +201,40 @@ void SimpleGainAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // `++channel` rather than `channel++`: both work, but pre-increment is the
     // C++ habit. For simple ints they're identical; for heavier iterator types
     // post-increment has to make a copy, so the community defaults to `++x`.
+
+    // ----------------------------------------------------------------------
+    //  THE ACTUAL DSP
+    // ----------------------------------------------------------------------
+    // Read the current fader position. `.load()` is how you read a
+    // std::atomic — it's explicit so you can't accidentally do a non-atomic
+    // read without noticing.
+    const auto gainInDecibels = gainDbParameter->load();
+
+    // Convert dB to a plain multiplier, because multiplying is what actually
+    // makes sound louder or quieter. The maths is 10^(dB/20):
+    //     0 dB -> 1.0    (unchanged)
+    //    -6 dB -> 0.501  (about half)
+    //   +6 dB -> 1.995   (about double)
+    //   -60 dB -> 0.001  (effectively silent)
+    const auto gainLinear = juce::Decibels::decibelsToGain (gainInDecibels);
+
+    // Multiply every sample in every channel by that number. One line, and
+    // it's the entire signal processing of this plugin.
+    buffer.applyGain (gainLinear);
+
+    // ----------------------------------------------------------------------
+    // ⚠️ This is deliberately the NAIVE version, and it has a real flaw.
+    //
+    // We read the fader ONCE per block and apply that one value to all 512
+    // samples. So when you drag the fader, the gain doesn't slide smoothly —
+    // it jumps in steps, once per block. Each jump is a discontinuity in the
+    // waveform, and your ear hears discontinuities as clicks. Drag fast and
+    // you get a gritty "zipper" sound.
+    //
+    // Phase 4 fixes this with juce::SmoothedValue, which ramps the gain
+    // per-sample instead of per-block. Left visibly broken for now so the
+    // problem is audible before the fix appears.
+    // ----------------------------------------------------------------------
 }
 
 
@@ -135,7 +256,11 @@ juce::AudioProcessorEditor* SimpleGainAudioProcessor::createEditor()
     // which we hand to the editor so it can talk back to us. In C# you'd just
     // write `this`; in C++ `this` is a POINTER, so `*this` converts it to a
     // reference to match the editor's constructor signature.
-    return new SimpleGainAudioProcessorEditor (*this);
+    // TEMPORARY: JUCE can auto-generate a functional GUI straight from the
+    // parameter list — a slider per parameter, correctly wired up. It's ugly,
+    // but it means we can HEAR the gain working before spending any time on
+    // interface code. We swap back to our own editor in Phase 6.
+    return new juce::GenericAudioProcessorEditor (*this);
 }
 
 

@@ -128,6 +128,35 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     //==========================================================================
+    // Parameters
+
+    /** Builds the list of parameters this plugin exposes to the host.
+
+        `static` means the same thing as in C#: it belongs to the class, not to
+        any instance. It has to be static because we call it in the member
+        initializer list to construct `apvts` — at which point `this` object is
+        still half-built, so calling a normal member function would be unsafe.
+
+        Returns a ParameterLayout *by value*. In C# that would imply a copy; in
+        modern C++ the compiler moves it instead (and usually elides the move
+        entirely), so nothing is actually copied. This is why C++ can return big
+        objects from functions without the cost you'd expect.
+    */
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
+    /** The parameter state object.
+
+        This one object does three jobs that would otherwise be three separate
+        chunks of code:
+          1. exposes "gain" to the host, so a DAW can automate it
+          2. serialises to/from XML, so settings survive a project reload
+          3. binds to GUI controls, so a slider and the parameter stay in sync
+
+        It's public because the editor needs to reach it to attach a slider.
+    */
+    juce::AudioProcessorValueTreeState apvts;
+
+    //==========================================================================
     // Boilerplate the host asks about. Mostly one-liners.
 
     const juce::String getName() const override;
@@ -151,6 +180,35 @@ public:
     void changeProgramName (int index, const juce::String& newName) override;
 
 private:
+    //==========================================================================
+    /** A cached pointer to the gain parameter's current value.
+
+        Two things are going on here, and both matter.
+
+        **Why cache it?** `apvts.getRawParameterValue("gain")` does a string
+        lookup. processBlock runs ~187 times a second with a hard deadline, so
+        we do the lookup ONCE in the constructor and keep the pointer.
+
+        **Why `std::atomic`?** This value is written by the message thread (the
+        user dragging a slider) and read by the audio thread (processBlock) —
+        two threads touching one variable. With a plain `float` that's a data
+        race, which in C++ is formally *undefined behaviour*: the compiler is
+        allowed to assume nobody else touches it and cache it in a register
+        forever, so your slider silently stops working in Release builds.
+        `std::atomic<float>` tells the compiler "hands off" and guarantees you
+        read a whole value, never a half-written one.
+
+        On x86 an atomic float load costs the same as a normal one — this
+        safety is effectively free. The nearest C# equivalents are `volatile`
+        and `Interlocked`, but the consequences here are harsher: a glitch on
+        the audio thread is an audible click in someone's recording.
+
+        A raw pointer (`*`) rather than a reference (`&`) because it's assigned
+        in the constructor *body*, not the initializer list — and references
+        can't be rebound after construction. We don't own it; the APVTS does.
+    */
+    std::atomic<float>* gainDbParameter = nullptr;
+
     //==========================================================================
     // A MACRO — a preprocessor text substitution, expanding into real code
     // before the compiler ever sees it. This one does two things:

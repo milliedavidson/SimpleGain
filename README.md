@@ -126,7 +126,7 @@ built and run.
 - [x] Standalone, AU and VST3 all building
 - [x] AU validated with `auval`
 - [x] macOS microphone/Bluetooth privacy permissions (TCC) handled correctly
-- [ ] An actual gain parameter (`AudioProcessorValueTreeState`) — *currently just wired for pass-through, no DSP yet*
+- [x] An actual gain parameter (`AudioProcessorValueTreeState`), host-automatable, -60 to +12 dB
 - [ ] Sample-accurate gain smoothing (no zipper noise)
 - [ ] State save/restore
 - [ ] A real GUI (currently JUCE's generic editor)
