@@ -1,6 +1,6 @@
 <img src="docs/banner.svg" alt="SimpleGain — a gain plugin, built from scratch while learning C++">
 
-<a href="#an-overview">An overview</a> | <a href="#key-features">Key features</a> | <a href="#tech-stack">Tech stack</a> | <a href="#get-started">Get started</a> | <a href="#status">Status</a> | <a href="#built-with-claude-ai">Built with Claude AI</a> | <a href="#contributing">Contributing</a> | <a href="#license">License</a>
+<a href="#an-overview">An overview</a> | <a href="#key-features">Key features</a> | <a href="#tech-stack">Tech stack</a> | <a href="#get-started">Get started</a> | <a href="#documentation">Documentation</a> | <a href="#status">Status</a> | <a href="#built-with-claude-ai">Built with Claude AI</a> | <a href="#contributing">Contributing</a> | <a href="#license">License</a>
 
 ## An overview
 
@@ -32,8 +32,11 @@ way to do it, I'd love to hear it: see [Contributing](#contributing).
 
 🎚️ AU validated end-to-end with Apple's own `auval` — Logic and GarageBand will load it
 
-🎚️ Every source file is heavily commented, explaining not just *what* the code does but *why* —
-in JUCE, in C++ and in real-time audio specifically
+🎚️ Commented for people learning C++ — short notes in the code, with the full reasoning in
+[`documentation/`](documentation/README.md) rather than crowding the source
+
+🎚️ Documentation explains *why* audio programming forces these choices, not just what the code
+does — real-time constraints, thread safety, dB vs linear gain
 
 🎚️ Built entirely with CMake, so it's IDE-agnostic — CLion, VS Code, Xcode, Visual Studio all
 work from the same `CMakeLists.txt`
@@ -116,6 +119,33 @@ auval -v aufx Sgai Mxdp
 
 ---
 
+## Documentation
+
+The code stays light on comments; the reasoning lives in
+**[`documentation/`](documentation/README.md)**. Each doc opens with an "In short" summary, then
+goes deep.
+
+| Doc | What's in it |
+|---|---|
+| **The plugin** | |
+| [The plan](documentation/plan.md) | The phased build, start to finish |
+| [Hosting & threads](documentation/plugin-hosting-and-threads.md) | Why the DAW owns `main()`, the audio thread's deadline, samples vs blocks |
+| [Parameters & automation](documentation/parameters-and-automation.md) | APVTS, dB vs linear gain, skew, thread-safe parameter reads |
+| [Identity & macOS](documentation/plugin-identity-and-macos.md) | Bundle IDs, 4-character codes, `auval`, privacy permissions |
+| **C++ foundations** | |
+| [Memory model](documentation/cpp-memory-model.md) | Stack vs heap, references vs pointers, RAII vs garbage collection |
+| [Build pipeline](documentation/cpp-build-pipeline.md) | Headers, preprocessor, compiling and linking, vs Roslyn and the CLR |
+| **Workflow** | |
+| [Dev tooling](documentation/dev-workflow-and-tooling.md) | CLion, CMake generators, Ninja, git submodules |
+| [Testing](documentation/testing.md) | How to actually get audio through it, standalone and in a DAW |
+| [CI & GitHub Actions](documentation/ci-and-github-actions.md) | What the pipeline does, and why the default template didn't work |
+
+If you have any suggestions or feedback, see [Contributing](#contributing).
+
+<div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
+
+---
+
 ## Status
 
 Built one verified phase at a time — nothing below is marked done unless it's actually been
@@ -126,7 +156,7 @@ built and run.
 - [x] Standalone, AU and VST3 all building
 - [x] AU validated with `auval`
 - [x] macOS microphone/Bluetooth privacy permissions (TCC) handled correctly
-- [x] An actual gain parameter (`AudioProcessorValueTreeState`), host-automatable, -60 to +12 dB
+- [x] An actual gain parameter (`AudioProcessorValueTreeState`), host-automatable, −60 to +30 dB
 - [ ] Sample-accurate gain smoothing (no zipper noise)
 - [ ] State save/restore
 - [ ] A real GUI (currently JUCE's generic editor)
@@ -148,11 +178,10 @@ as we go and I'm reviewing and steering every step of it.
 
 ## Contributing
 
-Spotted a bug, a bad explanation, or a better way to do something? I'd love to know —
+Spotted a bug or a better way to do something? I'd love to know —
 no software is 100% perfect, but I strive to get as close as possible 🙂
 
-- **Comment on a line** or open an issue if something looks off
-- **Open a PR** if you'd rather just fix it
+- **Comment on a line, open an issue or a PR**
 
 <div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
 

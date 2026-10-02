@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+  <rect width="900" height="430" fill="#ffffff"/>
+  <text x="450" y="30" text-anchor="middle" font-size="19" font-weight="700" fill="#1f2328">Planar vs interleaved: how stereo samples are laid out in memory</text>
+  <text x="450" y="52" text-anchor="middle" font-size="12" fill="#57606a">Same audio, same numbers, different arrangement in RAM.</text>
+
+  <!-- INTERLEAVED -->
+  <text x="40" y="92" font-size="15" font-weight="700" fill="#bc4c00">INTERLEAVED — one array, channels alternating</text>
+  <text x="40" y="112" font-size="12" fill="#57606a">Used by: WAV files, CoreAudio at the driver level, most hardware.</text>
+  <g>
+    <rect x="40"  y="126" width="62" height="44" fill="#ddf4ff" stroke="#0969da"/><text x="71"  y="153" text-anchor="middle" font-size="12" fill="#0969da">L0</text>
+    <rect x="102" y="126" width="62" height="44" fill="#ffebe9" stroke="#cf222e"/><text x="133" y="153" text-anchor="middle" font-size="12" fill="#cf222e">R0</text>
+    <rect x="164" y="126" width="62" height="44" fill="#ddf4ff" stroke="#0969da"/><text x="195" y="153" text-anchor="middle" font-size="12" fill="#0969da">L1</text>
+    <rect x="226" y="126" width="62" height="44" fill="#ffebe9" stroke="#cf222e"/><text x="257" y="153" text-anchor="middle" font-size="12" fill="#cf222e">R1</text>
+    <rect x="288" y="126" width="62" height="44" fill="#ddf4ff" stroke="#0969da"/><text x="319" y="153" text-anchor="middle" font-size="12" fill="#0969da">L2</text>
+    <rect x="350" y="126" width="62" height="44" fill="#ffebe9" stroke="#cf222e"/><text x="381" y="153" text-anchor="middle" font-size="12" fill="#cf222e">R2</text>
+    <rect x="412" y="126" width="62" height="44" fill="#ddf4ff" stroke="#0969da"/><text x="443" y="153" text-anchor="middle" font-size="12" fill="#0969da">L3</text>
+    <rect x="474" y="126" width="62" height="44" fill="#ffebe9" stroke="#cf222e"/><text x="505" y="153" text-anchor="middle" font-size="12" fill="#cf222e">R3</text>
+    <rect x="536" y="126" width="62" height="44" fill="#f6f8fa" stroke="#d0d7de"/><text x="567" y="153" text-anchor="middle" font-size="12" fill="#57606a">&#8230;</text>
+  </g>
+  <text x="620" y="145" font-size="12" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">float* data;</text>
+  <text x="620" y="163" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#57606a">left  = data[i * 2]</text>
+  <text x="620" y="180" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#57606a">right = data[i * 2 + 1]</text>
+
+  <!-- PLANAR -->
+  <text x="40" y="232" font-size="15" font-weight="700" fill="#1a7f37">PLANAR (&#8220;deinterleaved&#8221;) — one separate array per channel</text>
+  <text x="40" y="252" font-size="12" fill="#57606a">Used by: JUCE, and essentially every plugin API. This is what you get in processBlock.</text>
+
+  <text x="40" y="285" font-size="12" font-weight="600" fill="#0969da">channel 0</text>
+  <g>
+    <rect x="110" y="266" width="62" height="40" fill="#ddf4ff" stroke="#0969da"/><text x="141" y="291" text-anchor="middle" font-size="12" fill="#0969da">L0</text>
+    <rect x="172" y="266" width="62" height="40" fill="#ddf4ff" stroke="#0969da"/><text x="203" y="291" text-anchor="middle" font-size="12" fill="#0969da">L1</text>
+    <rect x="234" y="266" width="62" height="40" fill="#ddf4ff" stroke="#0969da"/><text x="265" y="291" text-anchor="middle" font-size="12" fill="#0969da">L2</text>
+    <rect x="296" y="266" width="62" height="40" fill="#ddf4ff" stroke="#0969da"/><text x="327" y="291" text-anchor="middle" font-size="12" fill="#0969da">L3</text>
+    <rect x="358" y="266" width="62" height="40" fill="#f6f8fa" stroke="#d0d7de"/><text x="389" y="291" text-anchor="middle" font-size="12" fill="#57606a">&#8230;</text>
+  </g>
+
+  <text x="40" y="340" font-size="12" font-weight="600" fill="#cf222e">channel 1</text>
+  <g>
+    <rect x="110" y="321" width="62" height="40" fill="#ffebe9" stroke="#cf222e"/><text x="141" y="346" text-anchor="middle" font-size="12" fill="#cf222e">R0</text>
+    <rect x="172" y="321" width="62" height="40" fill="#ffebe9" stroke="#cf222e"/><text x="203" y="346" text-anchor="middle" font-size="12" fill="#cf222e">R1</text>
+    <rect x="234" y="321" width="62" height="40" fill="#ffebe9" stroke="#cf222e"/><text x="265" y="346" text-anchor="middle" font-size="12" fill="#cf222e">R2</text>
+    <rect x="296" y="321" width="62" height="40" fill="#ffebe9" stroke="#cf222e"/><text x="327" y="346" text-anchor="middle" font-size="12" fill="#cf222e">R3</text>
+    <rect x="358" y="321" width="62" height="40" fill="#f6f8fa" stroke="#d0d7de"/><text x="389" y="346" text-anchor="middle" font-size="12" fill="#57606a">&#8230;</text>
+  </g>
+
+  <text x="460" y="285" font-size="12" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">float* left  = buffer.getWritePointer(0);</text>
+  <text x="460" y="305" font-size="12" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">float* right = buffer.getWritePointer(1);</text>
+  <text x="460" y="330" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#57606a">left[i]   // sample i, left</text>
+  <text x="460" y="348" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#57606a">right[i]  // sample i, right</text>
+
+  <rect x="40" y="378" width="820" height="38" rx="8" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="56" y="402" font-size="12" fill="#1f2328"><tspan font-weight="700">Why planar wins for DSP:</tspan> you can process one channel with a tight loop over contiguous memory &#8212; cache-friendly, and vectorisable by the CPU.</text>
+</svg>

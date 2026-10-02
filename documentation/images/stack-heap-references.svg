@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" width="900" height="620" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+  <rect width="900" height="620" fill="#ffffff"/>
+  <text x="450" y="30" text-anchor="middle" font-size="19" font-weight="700" fill="#1f2328">Stack vs heap, and what a reference actually is</text>
+
+  <!-- C# side -->
+  <rect x="25" y="52" width="410" height="250" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="230" y="76" text-anchor="middle" font-size="14" font-weight="700" fill="#0969da">C#</text>
+  <text x="45" y="98" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">var buf = new AudioBuffer();</text>
+
+  <rect x="45" y="112" width="160" height="170" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="125" y="132" text-anchor="middle" font-size="12" font-weight="600" fill="#57606a">STACK</text>
+  <rect x="60" y="142" width="130" height="42" rx="4" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="125" y="160" text-anchor="middle" font-size="10" fill="#1f2328">buf</text>
+  <text x="125" y="176" text-anchor="middle" font-size="9" fill="#57606a">(an address: 8 bytes)</text>
+  <text x="125" y="212" text-anchor="middle" font-size="10" fill="#57606a">small, fast,</text>
+  <text x="125" y="228" text-anchor="middle" font-size="10" fill="#57606a">auto-cleaned</text>
+
+  <rect x="255" y="112" width="160" height="170" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="335" y="132" text-anchor="middle" font-size="12" font-weight="600" fill="#57606a">HEAP</text>
+  <rect x="270" y="150" width="130" height="80" rx="4" fill="#fff8c5" stroke="#bc4c00"/>
+  <text x="335" y="178" text-anchor="middle" font-size="11" font-weight="600" fill="#bc4c00">the real object</text>
+  <text x="335" y="196" text-anchor="middle" font-size="10" fill="#57606a">all the actual data</text>
+  <text x="335" y="256" text-anchor="middle" font-size="10" fill="#57606a">freed later by the GC</text>
+  <path d="M192 163 L268 180" stroke="#0969da" stroke-width="2" marker-end="url(#ar)"/>
+
+  <text x="45" y="296" font-size="11" fill="#1f2328">Every class instance works this way. You have no choice.</text>
+
+  <!-- C++ side -->
+  <rect x="465" y="52" width="410" height="250" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="670" y="76" text-anchor="middle" font-size="14" font-weight="700" fill="#8250df">C++</text>
+  <text x="485" y="98" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">AudioBuffer&lt;float&gt; buf;</text>
+
+  <rect x="485" y="112" width="160" height="170" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="565" y="132" text-anchor="middle" font-size="12" font-weight="600" fill="#57606a">STACK</text>
+  <rect x="500" y="142" width="130" height="88" rx="4" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
+  <text x="565" y="172" text-anchor="middle" font-size="11" font-weight="600" fill="#8250df">the real object</text>
+  <text x="565" y="190" text-anchor="middle" font-size="10" fill="#57606a">actually lives HERE</text>
+  <text x="565" y="256" text-anchor="middle" font-size="10" fill="#1a7f37">destructor runs at `}`</text>
+
+  <rect x="695" y="112" width="160" height="170" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="775" y="132" text-anchor="middle" font-size="12" font-weight="600" fill="#57606a">HEAP</text>
+  <text x="775" y="196" text-anchor="middle" font-size="11" fill="#57606a">(empty &#8212; unless you</text>
+  <text x="775" y="214" text-anchor="middle" font-size="11" fill="#57606a">explicitly ask for it)</text>
+
+  <text x="485" y="296" font-size="11" fill="#1f2328">Objects are VALUES by default. The heap is opt-in.</text>
+
+  <!-- value vs ref passing -->
+  <text x="450" y="340" text-anchor="middle" font-size="16" font-weight="700" fill="#1f2328">Passing to a function: copy, or alias?</text>
+
+  <rect x="25" y="356" width="410" height="150" rx="10" fill="#ffebe9" stroke="#cf222e"/>
+  <text x="45" y="380" font-size="12" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#cf222e">void f(AudioBuffer&lt;float&gt; b)   // BY VALUE</text>
+  <rect x="45" y="394" width="150" height="56" rx="5" fill="#ffffff" stroke="#57606a"/>
+  <text x="120" y="416" text-anchor="middle" font-size="11" font-weight="600" fill="#1f2328">caller&#8217;s buffer</text>
+  <text x="120" y="434" text-anchor="middle" font-size="10" fill="#57606a">512 samples &#215; 2 ch</text>
+  <path d="M200 422 L260 422" stroke="#cf222e" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="230" y="414" text-anchor="middle" font-size="9" fill="#cf222e">COPY</text>
+  <rect x="265" y="394" width="150" height="56" rx="5" fill="#ffffff" stroke="#cf222e"/>
+  <text x="340" y="416" text-anchor="middle" font-size="11" font-weight="600" fill="#cf222e">a 2nd buffer</text>
+  <text x="340" y="434" text-anchor="middle" font-size="10" fill="#57606a">edits go here &#8212; lost</text>
+  <text x="45" y="474" font-size="11" fill="#cf222e">Allocates + copies 4 KB, every single call, 187&#215;/sec. And the</text>
+  <text x="45" y="491" font-size="11" fill="#cf222e">host never sees your changes. Wrong twice over.</text>
+
+  <rect x="465" y="356" width="410" height="150" rx="10" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="485" y="380" font-size="12" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1a7f37">void f(AudioBuffer&lt;float&gt;&amp; b)  // BY REFERENCE</text>
+  <rect x="485" y="394" width="150" height="56" rx="5" fill="#ffffff" stroke="#57606a"/>
+  <text x="560" y="416" text-anchor="middle" font-size="11" font-weight="600" fill="#1f2328">caller&#8217;s buffer</text>
+  <text x="560" y="434" text-anchor="middle" font-size="10" fill="#57606a">512 samples &#215; 2 ch</text>
+  <path d="M700 422 L640 422" stroke="#1a7f37" stroke-width="2" marker-end="url(#arg)"/>
+  <text x="670" y="414" text-anchor="middle" font-size="9" fill="#1a7f37">alias</text>
+  <rect x="705" y="394" width="150" height="56" rx="5" fill="#ffffff" stroke="#1a7f37"/>
+  <text x="780" y="416" text-anchor="middle" font-size="11" font-weight="600" fill="#1a7f37">b</text>
+  <text x="780" y="434" text-anchor="middle" font-size="10" fill="#57606a">another NAME for it</text>
+  <text x="485" y="474" font-size="11" fill="#1a7f37">Nothing is copied. Writing to `b` writes to the host&#8217;s memory</text>
+  <text x="485" y="491" font-size="11" fill="#1a7f37">directly. That is what &#8220;modifying in place&#8221; means.</text>
+
+  <!-- three-way -->
+  <rect x="25" y="522" width="850" height="84" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="45" y="545" font-size="13" font-weight="700" fill="#1f2328">Three ways to refer to an object in C++</text>
+  <text x="45" y="568" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#8250df">AudioBuffer  b</text>
+  <text x="200" y="568" font-size="11" fill="#1f2328">a VALUE &#8212; the object itself. Copying it copies the data.</text>
+  <text x="45" y="586" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1a7f37">AudioBuffer&amp; b</text>
+  <text x="200" y="586" font-size="11" fill="#1f2328">a REFERENCE &#8212; another name for an existing object. Never null, never re-pointed.</text>
+  <text x="45" y="604" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#bc4c00">AudioBuffer* b</text>
+  <text x="200" y="604" font-size="11" fill="#1f2328">a POINTER &#8212; a variable holding an address. Can be null, can be moved. Closest to a C# reference.</text>
+
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#0969da"/></marker>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#cf222e"/></marker>
+    <marker id="arg" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#1a7f37"/></marker>
+  </defs>
+</svg>

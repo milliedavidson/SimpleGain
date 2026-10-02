@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+  <rect width="900" height="560" fill="#ffffff"/>
+  <text x="450" y="30" text-anchor="middle" font-size="19" font-weight="700" fill="#1f2328">C++: preprocess &#8594; compile &#8594; link</text>
+  <text x="450" y="52" text-anchor="middle" font-size="12" fill="#57606a">Each .cpp is compiled ALONE, into its own .o file. The linker joins them at the end.</text>
+
+  <!-- stage labels -->
+  <text x="95"  y="86" text-anchor="middle" font-size="12" font-weight="700" fill="#57606a">1. SOURCE</text>
+  <text x="290" y="86" text-anchor="middle" font-size="12" font-weight="700" fill="#8250df">2. PREPROCESS</text>
+  <text x="500" y="86" text-anchor="middle" font-size="12" font-weight="700" fill="#0969da">3. COMPILE</text>
+  <text x="730" y="86" text-anchor="middle" font-size="12" font-weight="700" fill="#1a7f37">4. LINK</text>
+
+  <!-- row 1 -->
+  <rect x="30" y="100" width="130" height="50" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="95" y="122" text-anchor="middle" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">PluginProcessor</text>
+  <text x="95" y="139" text-anchor="middle" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">.cpp</text>
+
+  <path d="M162 125 L222 125" stroke="#8250df" stroke-width="2" marker-end="url(#p)"/>
+  <rect x="224" y="100" width="132" height="50" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="290" y="120" text-anchor="middle" font-size="10" fill="#8250df">all #includes pasted in</text>
+  <text x="290" y="137" text-anchor="middle" font-size="10" fill="#8250df">all #defines substituted</text>
+
+  <path d="M358 125 L418 125" stroke="#0969da" stroke-width="2" marker-end="url(#b)"/>
+  <rect x="420" y="100" width="160" height="50" rx="6" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="500" y="122" text-anchor="middle" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#0969da">PluginProcessor.o</text>
+  <text x="500" y="139" text-anchor="middle" font-size="10" fill="#57606a">machine code + unresolved names</text>
+
+  <!-- row 2 -->
+  <rect x="30" y="170" width="130" height="50" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="95" y="192" text-anchor="middle" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">PluginEditor</text>
+  <text x="95" y="209" text-anchor="middle" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">.cpp</text>
+  <path d="M162 195 L222 195" stroke="#8250df" stroke-width="2" marker-end="url(#p)"/>
+  <rect x="224" y="170" width="132" height="50" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="290" y="199" text-anchor="middle" font-size="10" fill="#8250df">(same treatment)</text>
+  <path d="M358 195 L418 195" stroke="#0969da" stroke-width="2" marker-end="url(#b)"/>
+  <rect x="420" y="170" width="160" height="50" rx="6" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="500" y="199" text-anchor="middle" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#0969da">PluginEditor.o</text>
+
+  <!-- row 3 -->
+  <rect x="30" y="240" width="130" height="50" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="95" y="269" text-anchor="middle" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">JUCE modules</text>
+  <path d="M162 265 L222 265" stroke="#8250df" stroke-width="2" marker-end="url(#p)"/>
+  <rect x="224" y="240" width="132" height="50" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="290" y="269" text-anchor="middle" font-size="10" fill="#8250df">(same treatment)</text>
+  <path d="M358 265 L418 265" stroke="#0969da" stroke-width="2" marker-end="url(#b)"/>
+  <rect x="420" y="240" width="160" height="50" rx="6" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="500" y="269" text-anchor="middle" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#0969da">juce_*.o  (many)</text>
+
+  <!-- linker -->
+  <path d="M582 125 C 640 125, 640 190, 668 190" stroke="#1a7f37" stroke-width="2" fill="none" marker-end="url(#g)"/>
+  <path d="M582 195 L666 195" stroke="#1a7f37" stroke-width="2" marker-end="url(#g)"/>
+  <path d="M582 265 C 640 265, 640 200, 668 200" stroke="#1a7f37" stroke-width="2" fill="none" marker-end="url(#g)"/>
+
+  <rect x="670" y="140" width="200" height="110" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+  <text x="770" y="168" text-anchor="middle" font-size="14" font-weight="700" fill="#1a7f37">THE LINKER</text>
+  <text x="770" y="190" text-anchor="middle" font-size="10" fill="#1f2328">matches every &#8220;I need X&#8221;</text>
+  <text x="770" y="206" text-anchor="middle" font-size="10" fill="#1f2328">to exactly one &#8220;here is X&#8221;</text>
+  <text x="770" y="228" text-anchor="middle" font-size="10" fill="#cf222e">unmatched &#8594; &#8220;undefined symbol&#8221;</text>
+
+  <path d="M770 252 L770 286" stroke="#1a7f37" stroke-width="2" marker-end="url(#g)"/>
+  <rect x="660" y="288" width="220" height="56" rx="8" fill="#ffffff" stroke="#1a7f37" stroke-width="2"/>
+  <text x="770" y="311" text-anchor="middle" font-size="12" font-weight="700" fill="#1f2328">SimpleGain.app</text>
+  <text x="770" y="330" text-anchor="middle" font-size="10" fill="#57606a">ONE self-contained binary, 42 MB</text>
+
+  <!-- C# comparison -->
+  <rect x="30" y="372" width="840" height="168" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="50" y="398" font-size="14" font-weight="700" fill="#1f2328">How C# differs</text>
+
+  <text x="50" y="424" font-size="12" font-weight="600" fill="#0969da">C#</text>
+  <text x="50" y="444" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">.cs files &#8594; [roslyn] &#8594; MyApp.dll (IL bytecode) &#8594; [CLR at RUNTIME] &#8594; machine code</text>
+  <text x="50" y="464" font-size="11" fill="#57606a">The compiler sees ALL your files at once. References stay separate .dll files, resolved when the app runs.</text>
+  <text x="50" y="481" font-size="11" fill="#57606a">A missing dependency fails at RUNTIME &#8212; FileNotFoundException.</text>
+
+  <text x="50" y="508" font-size="12" font-weight="600" fill="#8250df">C++</text>
+  <text x="50" y="528" font-size="11" fill="#57606a">Each .cpp is compiled in isolation and knows nothing about the others &#8212; hence headers. A missing dependency fails at LINK TIME.</text>
+
+  <defs>
+    <marker id="p" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#8250df"/></marker>
+    <marker id="b" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#0969da"/></marker>
+    <marker id="g" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#1a7f37"/></marker>
+  </defs>
+</svg>

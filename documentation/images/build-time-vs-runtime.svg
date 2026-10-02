@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 600" width="940" height="600" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+  <rect width="940" height="600" fill="#ffffff"/>
+  <text x="470" y="30" text-anchor="middle" font-size="19" font-weight="700" fill="#1f2328">Build time vs run time &#8212; and where each kind of error lives</text>
+  <text x="470" y="52" text-anchor="middle" font-size="12" fill="#57606a">The earlier a mistake is caught, the cheaper it is. C++ pushes almost everything left.</text>
+
+  <!-- timeline -->
+  <line x1="60" y1="120" x2="880" y2="120" stroke="#d0d7de" stroke-width="3"/>
+
+  <!-- build time bracket -->
+  <rect x="60" y="76" width="470" height="24" rx="5" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="295" y="93" text-anchor="middle" font-size="12" font-weight="700" fill="#0969da">BUILD TIME &#8212; on your machine, before shipping</text>
+  <rect x="560" y="76" width="320" height="24" rx="5" fill="#fff8c5" stroke="#bc4c00"/>
+  <text x="720" y="93" text-anchor="middle" font-size="12" font-weight="700" fill="#bc4c00">RUN TIME &#8212; on the user's machine</text>
+
+  <!-- nodes -->
+  <g>
+    <circle cx="120" cy="120" r="9" fill="#8250df"/>
+    <circle cx="275" cy="120" r="9" fill="#0969da"/>
+    <circle cx="450" cy="120" r="9" fill="#1a7f37"/>
+    <circle cx="640" cy="120" r="9" fill="#bc4c00"/>
+    <circle cx="820" cy="120" r="9" fill="#cf222e"/>
+  </g>
+
+  <!-- labels + cards -->
+  <text x="120" y="152" text-anchor="middle" font-size="12" font-weight="700" fill="#8250df">preprocess</text>
+  <rect x="42" y="164" width="156" height="118" rx="7" fill="#fbefff" stroke="#8250df"/>
+  <text x="120" y="186" text-anchor="middle" font-size="10.5" fill="#1f2328">pastes #includes,</text>
+  <text x="120" y="202" text-anchor="middle" font-size="10.5" fill="#1f2328">substitutes macros</text>
+  <text x="120" y="228" text-anchor="middle" font-size="10" font-weight="700" fill="#8250df">errors here:</text>
+  <text x="120" y="246" text-anchor="middle" font-size="9.5" fill="#57606a">file not found</text>
+  <text x="120" y="262" text-anchor="middle" font-size="9.5" fill="#57606a">bad #if</text>
+
+  <text x="275" y="152" text-anchor="middle" font-size="12" font-weight="700" fill="#0969da">compile</text>
+  <rect x="197" y="164" width="156" height="118" rx="7" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="275" y="186" text-anchor="middle" font-size="10.5" fill="#1f2328">one .cpp &#8594; one .o</text>
+  <text x="275" y="202" text-anchor="middle" font-size="10.5" fill="#1f2328">type-checks, optimises</text>
+  <text x="275" y="228" text-anchor="middle" font-size="10" font-weight="700" fill="#0969da">errors here:</text>
+  <text x="275" y="246" text-anchor="middle" font-size="9.5" fill="#57606a">syntax, type mismatch</text>
+  <text x="275" y="262" text-anchor="middle" font-size="9.5" fill="#57606a">&#8220;undeclared identifier&#8221;</text>
+
+  <text x="450" y="152" text-anchor="middle" font-size="12" font-weight="700" fill="#1a7f37">LINK</text>
+  <rect x="372" y="164" width="156" height="118" rx="7" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+  <text x="450" y="186" text-anchor="middle" font-size="10.5" fill="#1f2328">joins every .o into</text>
+  <text x="450" y="202" text-anchor="middle" font-size="10.5" fill="#1f2328">ONE binary</text>
+  <text x="450" y="228" text-anchor="middle" font-size="10" font-weight="700" fill="#1a7f37">errors here:</text>
+  <text x="450" y="246" text-anchor="middle" font-size="9.5" fill="#57606a">undefined symbol</text>
+  <text x="450" y="262" text-anchor="middle" font-size="9.5" fill="#57606a">duplicate symbol</text>
+
+  <text x="640" y="152" text-anchor="middle" font-size="12" font-weight="700" fill="#bc4c00">load</text>
+  <rect x="562" y="164" width="156" height="118" rx="7" fill="#fff8c5" stroke="#bc4c00"/>
+  <text x="640" y="186" text-anchor="middle" font-size="10.5" fill="#1f2328">OS maps the binary</text>
+  <text x="640" y="202" text-anchor="middle" font-size="10.5" fill="#1f2328">into memory</text>
+  <text x="640" y="228" text-anchor="middle" font-size="10" font-weight="700" fill="#bc4c00">errors here:</text>
+  <text x="640" y="246" text-anchor="middle" font-size="9.5" fill="#57606a">missing .dylib</text>
+  <text x="640" y="262" text-anchor="middle" font-size="9.5" fill="#57606a">wrong architecture</text>
+
+  <text x="820" y="152" text-anchor="middle" font-size="12" font-weight="700" fill="#cf222e">RUN</text>
+  <rect x="742" y="164" width="156" height="118" rx="7" fill="#ffebe9" stroke="#cf222e"/>
+  <text x="820" y="186" text-anchor="middle" font-size="10.5" fill="#1f2328">your code executes</text>
+  <text x="820" y="228" text-anchor="middle" font-size="10" font-weight="700" fill="#cf222e">errors here:</text>
+  <text x="820" y="246" text-anchor="middle" font-size="9.5" fill="#57606a">crashes, null deref,</text>
+  <text x="820" y="262" text-anchor="middle" font-size="9.5" fill="#57606a">logic bugs, audio clicks</text>
+
+  <path d="M198 120 L266 120" stroke="#57606a" stroke-width="2" marker-end="url(#s)"/>
+  <path d="M353 120 L441 120" stroke="#57606a" stroke-width="2" marker-end="url(#s)"/>
+  <path d="M528 120 L631 120" stroke="#57606a" stroke-width="2" marker-end="url(#s)"/>
+  <path d="M718 120 L811 120" stroke="#57606a" stroke-width="2" marker-end="url(#s)"/>
+  <line x1="545" y1="66" x2="545" y2="300" stroke="#cf222e" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="545" y="316" text-anchor="middle" font-size="11" font-weight="700" fill="#cf222e">you ship it here</text>
+
+  <!-- comparison table -->
+  <rect x="42" y="346" width="856" height="234" rx="9" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="62" y="372" font-size="14" font-weight="700" fill="#1f2328">Same mistake, caught at different times</text>
+
+  <line x1="62" y1="384" x2="878" y2="384" stroke="#d0d7de"/>
+  <text x="72"  y="404" font-size="11" font-weight="700" fill="#57606a">The mistake</text>
+  <text x="400" y="404" font-size="11" font-weight="700" fill="#8250df">C++ catches it&#8230;</text>
+  <text x="650" y="404" font-size="11" font-weight="700" fill="#0969da">C# catches it&#8230;</text>
+  <line x1="62" y1="414" x2="878" y2="414" stroke="#d0d7de"/>
+
+  <text x="72"  y="436" font-size="10.5" fill="#1f2328">Called a method that doesn't exist</text>
+  <text x="400" y="436" font-size="10.5" fill="#1a7f37">compile time</text>
+  <text x="650" y="436" font-size="10.5" fill="#1a7f37">compile time</text>
+
+  <text x="72"  y="460" font-size="10.5" fill="#1f2328">Declared it in the .h, never wrote the body</text>
+  <text x="400" y="460" font-size="10.5" fill="#1a7f37">LINK time &#8212; &#8220;undefined symbol&#8221;</text>
+  <text x="650" y="460" font-size="10.5" fill="#57606a">can't happen &#8212; no declarations</text>
+
+  <text x="72"  y="484" font-size="10.5" fill="#1f2328">A dependency is missing entirely</text>
+  <text x="400" y="484" font-size="10.5" fill="#1a7f37">LINK time &#8212; won't build</text>
+  <text x="650" y="484" font-size="10.5" fill="#cf222e">RUN time &#8212; FileNotFoundException</text>
+
+  <text x="72"  y="508" font-size="10.5" fill="#1f2328">Passed the wrong type to a method</text>
+  <text x="400" y="508" font-size="10.5" fill="#1a7f37">compile time</text>
+  <text x="650" y="508" font-size="10.5" fill="#1a7f37">compile time</text>
+
+  <text x="72"  y="532" font-size="10.5" fill="#1f2328">Used an object after freeing it</text>
+  <text x="400" y="532" font-size="10.5" fill="#cf222e">RUN time &#8212; if you're lucky, a crash</text>
+  <text x="650" y="532" font-size="10.5" fill="#1a7f37">impossible &#8212; the GC prevents it</text>
+
+  <text x="72"  y="556" font-size="10.5" fill="#1f2328">Blocked the audio thread</text>
+  <text x="400" y="556" font-size="10.5" fill="#cf222e">RUN time &#8212; an audible click</text>
+  <text x="650" y="556" font-size="10.5" fill="#57606a">n/a</text>
+
+  <text x="72" y="574" font-size="10" font-style="italic" fill="#57606a">Note the trade: C++ moves dependency errors left (safer), but memory errors stay right (more dangerous).</text>
+
+  <defs>
+    <marker id="s" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#57606a"/></marker>
+  </defs>
+</svg>
