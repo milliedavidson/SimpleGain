@@ -59,7 +59,7 @@ We build Standalone first precisely so this can't block early progress.
 
 ## Target layout
 
-plaintext```
+```text
 /Users/millie/Documents/Programming/REPOS/Audio/SimpleGain/
 ├── CMakeLists.txt            # the build script — this replaces your .csproj/.sln
 ├── .gitignore
@@ -70,6 +70,7 @@ plaintext```
     ├── PluginProcessor.cpp   # the audio engine — implementation
     ├── PluginEditor.h        # the GUI — declaration
     └── PluginEditor.cpp      # the GUI — implementation
+```
 
 Two classes, four files. The `.h`/`.cpp` split has no C# equivalent and is the first thing
 we'll unpack.

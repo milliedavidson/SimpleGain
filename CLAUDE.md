@@ -87,16 +87,19 @@ When a change alters something a doc states — a range, an identity value, a ph
 section or file name — update the doc, the **Status** list in `README.md`, and the "In short" in
 `documentation/plan.md` **in the same change**. These have all gone stale before.
 
-Before calling docs work done, verify, rather than assuming:
+Before calling docs work done, run the checker — it must exit 0:
 
-- every link and `#anchor` resolves. GitHub's anchors lowercase the heading, strip punctuation
-  and turn each space into its own hyphen — so an em dash between two spaced words gives a
-  **double** hyphen. Generate anchors from the real heading; never hand-guess them
-- every image referenced exists, and none in `documentation/images/` is orphaned
-- every `documentation/<file>.md section N` pointer in `Source/` and `CMakeLists.txt` names a
-  section that really exists. Inserting or renumbering a doc section breaks these silently
-- `documentation/README.md` lists every doc, and each doc has an "In short" block and a nav line
-  linking the others
+```bash
+python3 scripts/check-docs.py
+```
+
+It checks that every link and `#anchor` resolves, every referenced image exists (and none is
+orphaned), every `documentation/<file>.md section N` pointer in `Source/` and `CMakeLists.txt`
+names a section that really exists, `documentation/README.md` lists every doc, every doc has an
+"In short" block and a nav line linking the others, and code fences are well-formed. Never
+hand-guess an anchor — GitHub turns each space into its own hyphen, so an em dash between two
+spaced words gives a **double** hyphen. If you find a new way docs can break, add a check to the
+script rather than a sentence here.
 
 ## Structure
 
@@ -105,6 +108,7 @@ CMakeLists.txt              the build script
 libs/JUCE/                  JUCE 8, as a git submodule — not committed source
 Source/                     the plugin: PluginProcessor.{h,cpp}, PluginEditor.{h,cpp}
 .github/workflows/build.yml CI — builds all 3 formats, validates the AU with auval
+scripts/check-docs.py         verifies the docs hang together — see "Keep the docs in step"
 documentation/              the reasoning behind the code — see documentation/README.md
 documentation/images/banner.svg   README hero image
 ```

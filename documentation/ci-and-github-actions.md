@@ -75,9 +75,9 @@ name: Build & Validate
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
 
 jobs:
   build:
@@ -109,6 +109,11 @@ Three details worth calling out:
 - **`auval -v aufx Sgai Mxdp`** as the final step — the exact same command run locally to
   validate the plugin (see [Plugin identity & macOS §2](plugin-identity-and-macos.md#2-where-do-i-find-auval)), so CI is genuinely
   checking "would Logic actually load this," not just "does it compile."
+- **`branches: [ "main", "develop" ]`** — appears twice and means two different things. Under
+  `push` it's the branch being pushed *to*; under `pull_request` it's the branch the PR is
+  *aimed at*. Both include `develop`, so work is checked as soon as it lands there, before it's
+  merged to `main`. A PR from `develop` into `main` is covered by the `main` entry — its commits
+  will already have had a push run, so that PR shows a second, duplicate run. Harmless.
 - **`runs-on: macos-latest`** — checked this against GitHub's own `runner-images` repo rather
   than assume: `macos-latest` currently means **Apple Silicon (arm64)**, and `macos-14` (the
   Intel-era default many older examples still show) is already **deprecated**. If an Intel
@@ -125,7 +130,7 @@ Azure VMs (GitHub is owned by Microsoft) that get created, used once, and thrown
 
 What makes that actually useful isn't "different hardware" — the architecture difference is
 just a property of *which runner label was chosen*, not something CI inherently requires (see
-§3 above — `macos-15-intel` would give an x86_64 runner matching the machine this was developed
+§2 above — `macos-15-intel` would give an x86_64 runner matching the machine this was developed
 on). The real value is three things a local Terminal can't give you:
 
 1. **A blank slate, every time.** Every run starts from an empty machine — nothing left over
