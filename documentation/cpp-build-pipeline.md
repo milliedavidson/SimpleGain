@@ -5,7 +5,7 @@ the preprocessor, the compiler, the linker — and how that compares to Roslyn a
 
 **SimpleGain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Identity & macOS](plugin-identity-and-macos.md)  
-**C++ foundations:** [Memory model](cpp-memory-model.md) · **Build pipeline**  
+**C++ foundations:** [Memory model](cpp-memory-model.md) · **Build pipeline** · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
 ---

@@ -1,4 +1,4 @@
-<img src="docs/banner.svg" alt="SimpleGain — a gain plugin, built from scratch while learning C++">
+<img src="documentation/images/banner.svg" alt="SimpleGain — a gain plugin, built from scratch while learning C++">
 
 <a href="#an-overview">An overview</a> | <a href="#key-features">Key features</a> | <a href="#tech-stack">Tech stack</a> | <a href="#get-started">Get started</a> | <a href="#documentation">Documentation</a> | <a href="#status">Status</a> | <a href="#built-with-claude-ai">Built with Claude AI</a> | <a href="#contributing">Contributing</a> | <a href="#license">License</a>
 
@@ -135,6 +135,7 @@ goes deep.
 | **C++ foundations** | |
 | [Memory model](documentation/cpp-memory-model.md) | Stack vs heap, references vs pointers, RAII vs garbage collection |
 | [Build pipeline](documentation/cpp-build-pipeline.md) | Headers, preprocessor, compiling and linking, vs Roslyn and the CLR |
+| [CMake walkthrough](documentation/cmake-walkthrough.md) | `CMakeLists.txt` line by line, and why Debug builds matter for audio |
 | **Workflow** | |
 | [Dev tooling](documentation/dev-workflow-and-tooling.md) | CLion, CMake generators, Ninja, git submodules |
 | [Testing](documentation/testing.md) | How to actually get audio through it, standalone and in a DAW |

@@ -5,7 +5,7 @@ troubleshooting live in the sibling files below, cross-linked from wherever they
 
 **SimpleGain docs** · [Index](README.md)  
 **The plugin:** **Plan** · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Identity & macOS](plugin-identity-and-macos.md)  
-**C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md)  
+**C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
 ---
@@ -140,6 +140,8 @@ the compile → link → binary pipeline; what "linking a library" means.
 → *background: [§4 Compile/link](cpp-build-pipeline.md#4-the-compile--link--binary-pipeline), [§2 Preprocessor](cpp-build-pipeline.md#2-what-is-the-preprocessor), [§1 Headers](cpp-build-pipeline.md#1-the-juce-headers--is-it-like-using-directives-in-c)*
 
 ### Phase 1 - Deep dive
+
+→ *The full line-by-line tour of `CMakeLists.txt` is in [CMake walkthrough](cmake-walkthrough.md).*
 
 There's no NuGet in C++. A dependency is source code you compile yourself. That's why libs/JUCE is 110 MB of actual C++ that will get compiled into your plugin.
 
@@ -336,7 +338,7 @@ The Phase 3 version works but is subtly wrong. Fix it, and explain each problem:
 
 1. **`juce::ScopedNoDenormals`** at the top of `processBlock` — denormal floats are
    near-zero values that cause massive CPU stalls on x86. A stack-guard object; pure RAII.
-2. **Clear unused output channels** — the host may hand you more outputs than inputs, and
+2. **Clear unused output channels** — the host may hand you more outputs than inputs and
    uninitialised buffers contain garbage (loud garbage).
 3. **dB → linear conversion** via `juce::Decibels::decibelsToGain` — the actual maths
    (`10^(dB/20)`) and why it's not a straight multiply.

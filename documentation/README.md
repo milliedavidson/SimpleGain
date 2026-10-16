@@ -31,6 +31,7 @@ far in a plugin without it.
 |---|---|
 | **[Memory model](cpp-memory-model.md)** | Stack vs heap, references vs pointers, `const`, RAII vs garbage collection, use-after-free |
 | **[Build pipeline](cpp-build-pipeline.md)** | Headers, the preprocessor, compiling, linking, `.o` files, and how it all differs from Roslyn and the CLR |
+| **[CMake walkthrough](cmake-walkthrough.md)** | `CMakeLists.txt` line by line — targets, PRIVATE vs PUBLIC, compile definitions, Debug vs Release |
 
 ## Workflow
 
