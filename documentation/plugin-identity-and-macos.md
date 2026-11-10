@@ -151,10 +151,13 @@ So:
 JUCE exposes these as `juce_add_plugin` options, so it's four lines in `CMakeLists.txt`:
 
 ```cmake
-MICROPHONE_PERMISSION_ENABLED   TRUE
-MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear the plugin processing live sound."
-BLUETOOTH_PERMISSION_ENABLED    TRUE
-BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
+juce_add_plugin(SimpleGain
+    MICROPHONE_PERMISSION_ENABLED   TRUE
+    MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear the plugin processing live sound."
+    BLUETOOTH_PERMISSION_ENABLED    TRUE
+    BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
+    # ... more arguments
+    )
 ```
 
 Verify it worked:

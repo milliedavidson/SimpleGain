@@ -96,7 +96,9 @@ python3 scripts/check-docs.py
 It checks that every link and `#anchor` resolves, every referenced image exists (and none is
 orphaned), every `documentation/<file>.md section N` pointer in `Source/` and `CMakeLists.txt`
 names a section that really exists, `documentation/README.md` lists every doc, every doc has an
-"In short" block and a nav line linking the others, and code fences are well-formed. Never
+"In short" block and a nav line linking the others, code fences are well-formed and every
+cmake code block is valid CMake (an argument fragment on its own isn't — wrap it in its command,
+because CLion flags those as errors). Never
 hand-guess an anchor — GitHub turns each space into its own hyphen, so an em dash between two
 spaced words gives a **double** hyphen. If you find a new way docs can break, add a check to the
 script rather than a sentence here.

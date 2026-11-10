@@ -46,10 +46,10 @@ builds JUCE's small helper tool, `juceaide`, which JUCE needs in order to genera
 
 **Two differences from a `.csproj` that matter in practice:**
 
-| | C# (`.csproj`) | C++ (CMake) |
-|---|---|---|
+|              | C# (`.csproj`)                                  | C++ (CMake)                                                    |
+|--------------|-------------------------------------------------|----------------------------------------------------------------|
 | Source files | SDK-style projects glob `**/*.cs` automatically | Listed **explicitly** — an unlisted `.cpp` is silently ignored |
-| Dependencies | NuGet restores a compiled package | **Source you compile yourself**, here as a git submodule |
+| Dependencies | NuGet restores a compiled package               | **Source you compile yourself**, here as a git submodule       |
 
 → *More on why unlisted files vanish: [Build pipeline §5](cpp-build-pipeline.md#5-what-is-a-o-file-and-is-a-cpp-file-just-a-file).*
 
@@ -104,26 +104,30 @@ submodule". The fix is in the *Get started* section of the main README.
 adds a **shared-code static library** named `SimpleGain`, plus an extra target for each format
 you ask for. You can see all of them:
 
-| Target | What it is |
-|---|---|
-| `SimpleGain` | the shared code — builds `libSimpleGain_SharedCode.a` |
-| `SimpleGain_Standalone` | a normal `.app` |
-| `SimpleGain_AU` | the Audio Unit, for Logic and GarageBand |
-| `SimpleGain_VST3` | the VST3, for Reaper, Ableton, Bitwig and the rest |
+| Target                  | What it is                                            |
+|-------------------------|-------------------------------------------------------|
+| `SimpleGain`            | the shared code — builds `libSimpleGain_SharedCode.a` |
+| `SimpleGain_Standalone` | a normal `.app`                                       |
+| `SimpleGain_AU`         | the Audio Unit, for Logic and GarageBand              |
+| `SimpleGain_VST3`       | the VST3, for Reaper, Ableton, Bitwig and the rest    |
 
 Our own code is compiled **once**, into the shared library, and each format target links it
 against a different thin JUCE wrapper — see
 [Build pipeline §9](cpp-build-pipeline.md#9-no-portable-binary--does-that-mean-separate-c-code-per-format-and-per-os).
 
-The arguments come in groups.
+The arguments come in groups. Each is shown inside the call it belongs to, so you can see
+where it lives; in `CMakeLists.txt` they're one continuous argument list.
 
 ### Identity
 
 ```cmake
-COMPANY_NAME                "Maxximum Displacement"
-BUNDLE_ID                   "com.maxximumdisplacement.simplegain"
-PLUGIN_MANUFACTURER_CODE    Mxdp
-PLUGIN_CODE                 Sgai
+juce_add_plugin(SimpleGain
+    COMPANY_NAME                "Maxximum Displacement"
+    BUNDLE_ID                   "com.maxximumdisplacement.simplegain"
+    PLUGIN_MANUFACTURER_CODE    Mxdp
+    PLUGIN_CODE                 Sgai
+    # ... more arguments
+    )
 ```
 
 **These are permanent once anyone has a saved project.** The 4-character codes have strict
@@ -133,12 +137,15 @@ covered in [Identity & macOS §1](plugin-identity-and-macos.md#1-company_name-bu
 ### What kind of plugin is this?
 
 ```cmake
-IS_SYNTH                    FALSE
-NEEDS_MIDI_INPUT            FALSE
-NEEDS_MIDI_OUTPUT           FALSE
-IS_MIDI_EFFECT              FALSE
-EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-VST3_CATEGORIES             "Fx" "Tools"
+juce_add_plugin(SimpleGain
+    IS_SYNTH                    FALSE
+    NEEDS_MIDI_INPUT            FALSE
+    NEEDS_MIDI_OUTPUT           FALSE
+    IS_MIDI_EFFECT              FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+    VST3_CATEGORIES             "Fx" "Tools"
+    # ... more arguments
+    )
 ```
 
 Every one of the `FALSE` lines is **JUCE's default** (checked against its docs), so they change
@@ -157,10 +164,13 @@ them to the host. Hosts generally prefer the latter.
 ### macOS privacy permissions
 
 ```cmake
-MICROPHONE_PERMISSION_ENABLED   TRUE
-MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear..."
-BLUETOOTH_PERMISSION_ENABLED    TRUE
-BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
+juce_add_plugin(SimpleGain
+    MICROPHONE_PERMISSION_ENABLED   TRUE
+    MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear..."
+    BLUETOOTH_PERMISSION_ENABLED    TRUE
+    BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
+    # ... more arguments
+    )
 ```
 
 Without these, macOS **kills the process** the moment it touches the microphone or Bluetooth —
@@ -170,9 +180,12 @@ host owns the microphone. Full story: [Identity & macOS §4](plugin-identity-and
 ### Formats, install, and names
 
 ```cmake
-FORMATS                     Standalone AU VST3
-COPY_PLUGIN_AFTER_BUILD     TRUE
-PRODUCT_NAME                "SimpleGain"
+juce_add_plugin(SimpleGain
+    FORMATS                     Standalone AU VST3
+    COPY_PLUGIN_AFTER_BUILD     TRUE
+    PRODUCT_NAME                "SimpleGain"
+    # ... more arguments
+    )
 ```
 
 **`FORMATS`** lists what to build. `AU` only exists on macOS — JUCE's docs say AU targets are
@@ -223,11 +236,11 @@ entirely — nothing is disabled at runtime. The mechanism is the preprocessor:
 
 I checked each one against JUCE's source, because they don't all do what you'd assume:
 
-| Definition | JUCE's default | What `0` does here |
-|---|---|---|
-| `JUCE_WEB_BROWSER` | `1` | Drops the embedded-browser component, which we never use. |
-| `JUCE_USE_CURL` | `1` | **Nothing on macOS.** JUCE documents this one as *Linux only*. It's harmless, and keeps the same file sensible if the project is ever built on Linux. |
-| `JUCE_VST3_CAN_REPLACE_VST2` | `1` | The VST3 won't load or save VST2-compatible state. See below. |
+| Definition                   | JUCE's default | What `0` does here                                                                                                                                    |
+|------------------------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `JUCE_WEB_BROWSER`           | `1`            | Drops the embedded-browser component, which we never use.                                                                                             |
+| `JUCE_USE_CURL`              | `1`            | **Nothing on macOS.** JUCE documents this one as *Linux only*. It's harmless, and keeps the same file sensible if the project is ever built on Linux. |
+| `JUCE_VST3_CAN_REPLACE_VST2` | `1`            | The VST3 won't load or save VST2-compatible state. See below.                                                                                         |
 
 ### Why `JUCE_VST3_CAN_REPLACE_VST2=0` is a permanent choice
 
@@ -261,11 +274,11 @@ target_link_libraries(SimpleGain
 
 Every setting in CMake can be marked with how far it spreads:
 
-| Keyword | Used to build this target? | Passed on to anything that links against it? |
-|---|---|---|
-| `PRIVATE` | yes | **no** |
-| `PUBLIC` | yes | **yes** |
-| `INTERFACE` | no | yes |
+| Keyword     | Used to build this target? | Passed on to anything that links against it? |
+|-------------|----------------------------|----------------------------------------------|
+| `PRIVATE`   | yes                        | **no**                                       |
+| `PUBLIC`    | yes                        | **yes**                                      |
+| `INTERFACE` | no                         | yes                                          |
 
 The nearest C# idea is `PrivateAssets="all"` on a `PackageReference`: it says "I use this, but
 don't let it flow to whoever references me." Plain `PUBLIC` is the default transitive flow.
@@ -292,11 +305,11 @@ exactly what we do.
 
 With AppleClang, from `JUCEHelperTargets.cmake`:
 
-| Target | Debug | Release |
-|---|---|---|
-| `config_flags` | `-g -O0` (debug info, no optimisation) | `-O3` |
-| `lto_flags` | nothing | `-flto` at compile **and** link |
-| `warning_flags` | the same long warning list in both | |
+| Target          | Debug                                  | Release                         |
+|-----------------|----------------------------------------|---------------------------------|
+| `config_flags`  | `-g -O0` (debug info, no optimisation) | `-O3`                           |
+| `lto_flags`     | nothing                                | `-flto` at compile **and** link |
+| `warning_flags` | the same long warning list in both     |                                 |
 
 **`-flto`** is link-time optimisation. Normally each `.cpp` is compiled in isolation (see
 [Build pipeline §4](cpp-build-pipeline.md#4-the-compile--link--binary-pipeline)), so the
@@ -339,8 +352,8 @@ With the Makefile generator, one build folder is one build type, hence the separ
 
 ## 9. What isn't in the file yet
 
-| Missing | Why | When |
-|---|---|---|
-| `CMAKE_OSX_ARCHITECTURES "x86_64;arm64"` | Builds currently match the machine's own architecture, so an Intel Mac builds Intel-only. | Phase 8 — universal binary |
-| `CMAKE_OSX_DEPLOYMENT_TARGET` | Unset, so it follows the SDK you build with, which can make the plugin refuse to load on older macOS versions. | Decide before release |
-| `juce_generate_juce_header` | Deliberately omitted — we `#include` module headers directly, which compiles faster and keeps dependencies explicit. | Never — it's a design choice |
+| Missing                                  | Why                                                                                                                  | When                         |
+|------------------------------------------|----------------------------------------------------------------------------------------------------------------------|------------------------------|
+| `CMAKE_OSX_ARCHITECTURES "x86_64;arm64"` | Builds currently match the machine's own architecture, so an Intel Mac builds Intel-only.                            | Phase 8 — universal binary   |
+| `CMAKE_OSX_DEPLOYMENT_TARGET`            | Unset, so it follows the SDK you build with, which can make the plugin refuse to load on older macOS versions.       | Decide before release        |
+| `juce_generate_juce_header`              | Deliberately omitted — we `#include` module headers directly, which compiles faster and keeps dependencies explicit. | Never — it's a design choice |
