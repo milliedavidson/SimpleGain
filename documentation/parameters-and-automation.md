@@ -4,7 +4,7 @@ How a knob the user turns becomes a number the audio thread can safely read — 
 learns what that number means.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · **Parameters & automation** · [Identity & macOS](plugin-identity-and-macos.md)  
+**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · **Parameters & automation** · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [Identity & macOS](plugin-identity-and-macos.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
@@ -315,22 +315,23 @@ The other flags in that line:
 | `Can Ramp` | safe to change smoothly / automate continuously |
 | `Readable` / `Writable` | the host may both query and set it |
 
-### The irony worth noticing
+### The irony — and how Phase 4 resolved it
 
-The plugin advertises **Can Ramp** — but as of Phase 3, the implementation *doesn't* ramp. We
-read the fader once per block and apply that single value to all 512 samples:
+In Phase 3 the plugin advertised **Can Ramp** but didn't actually ramp. It read the fader once per
+block and applied that single value to all 512 samples:
 
 ```cpp
-const auto gainInDecibels = gainDbParameter->load();   // once per BLOCK
+const auto gainInDecibels = gainDbParameter->load();   // once per BLOCK (Phase 3)
 buffer.applyGain (juce::Decibels::decibelsToGain (gainInDecibels));
 ```
 
-So the host is told "you can automate this smoothly," and we then apply it in chunky per-block
+So the host was told "you can automate this smoothly," and we applied it in chunky per-block
 steps — roughly 94 updates a second instead of 48,000. Each step is a discontinuity in the
-waveform, and ears hear discontinuities as clicks. Drag the fader fast and it sounds gritty:
-**zipper noise**.
+waveform, and ears hear discontinuities as clicks: **zipper noise**.
 
-Phase 4 closes that gap with `juce::SmoothedValue`, which ramps per-sample and makes the
-implementation actually honour the flag. See
-[Plugin hosting & threads §8](plugin-hosting-and-threads.md#8-samples-vs-blocks) for why
-per-block and per-sample differ by a factor of 512.
+Phase 4 closed the gap with `juce::SmoothedValue`, which glides per-sample, so the implementation
+now honours the flag. Measured on the real plugin, the biggest change between two adjacent
+samples for a +24 dB move fell from 14.85 to 0.0155. The full story is in
+[Smoothing & the audio loop](smoothing-and-the-audio-loop.md); for why per-block and per-sample
+differ by a factor of 512, see
+[Plugin hosting & threads §8](plugin-hosting-and-threads.md#8-samples-vs-blocks).

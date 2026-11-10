@@ -12,6 +12,7 @@ It checks that:
   4. documentation/README.md lists every doc
   5. every doc has an "In short" block and a nav line linking all the other docs
   6. code fences start their line and pair up (a mangled fence breaks the whole page)
+  7. every ```cmake block is syntactically valid CMake (CLion parses them and flags errors)
 
 Standard library only. Anchors follow GitHub's rules: lowercase the heading, strip punctuation,
 then turn each space into its own hyphen -- so an em dash between two spaced words produces a
@@ -45,6 +46,54 @@ def strip_code_blocks(text):
     """Remove fenced blocks. Only line-start fences count -- a ``` glued to the end of a line
     is not a fence, and treating it as one flips every later pairing (it once hid a broken link)."""
     return re.sub(FENCE + r".*?" + FENCE + r".*?$", "", text, flags=re.S | re.M)
+
+
+def cmake_syntax_error(source):
+    """None if `source` is syntactically valid CMake, else a short reason. Syntax only: nothing runs.
+
+    A CMake file is a series of `command(arguments)` calls. A bare list of arguments -- say the
+    middle of a juce_add_plugin(...) call -- is not valid on its own, and CLion flags it."""
+    n = len(source)
+
+    def skip_blank(i):
+        while i < n and (source[i].isspace() or source[i] == "#"):
+            if source[i] == "#":
+                while i < n and source[i] != "\n":
+                    i += 1
+            else:
+                i += 1
+        return i
+
+    i = skip_blank(0)
+    while i < n:
+        name = re.match(r"[A-Za-z_]\w*", source[i:])
+        if not name:
+            return f"expected a command name, found {source[i:i + 24].splitlines()[0]!r}"
+        i = skip_blank(i + name.end())
+        if i >= n or source[i] != "(":
+            return f"expected '(' after {name.group()!r}"
+        depth, i = 1, i + 1
+        while i < n and depth:
+            char = source[i]
+            if char == '"':                      # quoted argument, with \ escapes
+                i += 1
+                while i < n and source[i] != '"':
+                    i += 2 if source[i] == "\\" else 1
+                if i >= n:
+                    return "unterminated quoted argument"
+            elif char == "#":                    # comment to end of line
+                while i < n and source[i] != "\n":
+                    i += 1
+                continue
+            elif char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+            i += 1
+        if depth:
+            return f"missing ')' to close {name.group()}("
+        i = skip_blank(i)
+    return None
 
 
 anchors = {
@@ -122,6 +171,16 @@ for f in md_files:
                             f"a code fence -- the block will render wrongly")
     if len(re.findall(FENCE, text, re.M)) % 2:
         problems.append(f"{rel(f)}: unbalanced code fences (an opening ``` has no closing one)")
+
+# 7. cmake blocks must be valid CMake ------------------------------------------------------
+for f in md_files:
+    text = f.read_text()
+    for block in re.finditer(r"^ {0,3}```cmake\n(.*?)^ {0,3}```", text, re.S | re.M):
+        error = cmake_syntax_error(block.group(1))
+        if error:
+            line = text[:block.start()].count("\n") + 1
+            problems.append(f"{rel(f)}:{line}: ```cmake block is not valid CMake ({error}) -- "
+                            f"wrap argument fragments in their command, e.g. juce_add_plugin(...)")
 
 # report ---------------------------------------------------------------------------------------
 print(f"checked {len(md_files)} markdown files, {len(docs)} docs, {len(present)} images")

@@ -20,6 +20,7 @@ How a plugin and a DAW actually relate, and what that forces on your design.
 | **[The plan](plan.md)** | The phased build, start to finish — what's done and what's next |
 | **[Hosting & threads](plugin-hosting-and-threads.md)** | Why the DAW owns `main()`, the audio thread's deadline, samples vs blocks, planar buffers |
 | **[Parameters & automation](parameters-and-automation.md)** | APVTS, dB vs linear gain, skew, choosing a range, thread-safe parameter reads |
+| **[Smoothing & the audio loop](smoothing-and-the-audio-loop.md)** | Zipper noise, `SmoothedValue`, loop order, raw pointers, denormals, `float` vs `double` |
 | **[Identity & macOS](plugin-identity-and-macos.md)** | Bundle IDs, the 4-character codes, `auval`, Pro Tools/AAX, privacy permissions |
 
 ## C++ foundations

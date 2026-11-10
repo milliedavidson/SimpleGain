@@ -131,6 +131,7 @@ goes deep.
 | [The plan](documentation/plan.md) | The phased build, start to finish |
 | [Hosting & threads](documentation/plugin-hosting-and-threads.md) | Why the DAW owns `main()`, the audio thread's deadline, samples vs blocks |
 | [Parameters & automation](documentation/parameters-and-automation.md) | APVTS, dB vs linear gain, skew, thread-safe parameter reads |
+| [Smoothing & the audio loop](documentation/smoothing-and-the-audio-loop.md) | Zipper noise and `SmoothedValue`, loop order, raw pointers, denormals |
 | [Identity & macOS](documentation/plugin-identity-and-macos.md) | Bundle IDs, 4-character codes, `auval`, privacy permissions |
 | **C++ foundations** | |
 | [Memory model](documentation/cpp-memory-model.md) | Stack vs heap, references vs pointers, RAII vs garbage collection |
@@ -158,7 +159,7 @@ built and run.
 - [x] AU validated with `auval`
 - [x] macOS microphone/Bluetooth privacy permissions (TCC) handled correctly
 - [x] An actual gain parameter (`AudioProcessorValueTreeState`), host-automatable, −60 to +30 dB
-- [ ] Sample-accurate gain smoothing (no zipper noise)
+- [x] Sample-accurate gain smoothing (no zipper noise) — biggest per-sample gain step down 960× in testing
 - [ ] State save/restore
 - [ ] A real GUI (currently JUCE's generic editor)
 - [ ] Universal binary (Apple Silicon + Intel)

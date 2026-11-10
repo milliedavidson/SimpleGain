@@ -4,7 +4,7 @@ The phased build plan for SimpleGain, a JUCE 8 gain plugin. Concept explanations
 troubleshooting live in the sibling files below, cross-linked from wherever they came up.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** **Plan** · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Identity & macOS](plugin-identity-and-macos.md)  
+**The plugin:** **Plan** · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [Identity & macOS](plugin-identity-and-macos.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
@@ -12,9 +12,9 @@ troubleshooting live in the sibling files below, cross-linked from wherever they
 
 ## In short
 
-**Where this is up to:** Phases 0–3 are built and verified. The plugin builds as Standalone, AU
-and VST3, passes `auval`, and has a working host-automatable gain parameter. Next up is Phase 4
-— per-sample smoothing to kill the zipper noise.
+**Where this is up to:** Phases 0–4 are built and verified. The plugin builds as Standalone, AU
+and VST3, passes `auval`, has a host-automatable gain parameter, and glides between gain values
+instead of stepping. Next up is Phase 5 — saving and restoring state.
 
 - The build is **CMake + JUCE 8 as a submodule** — no Projucer.
 - **Standalone is a dev tool**, not a product; AU and VST3 are the real outputs.
@@ -358,6 +358,17 @@ side-effecting destructors (RAII again, now that it's obviously useful); floatin
 representation; why `float` not `double` in audio.
 
 **Verification:** sweep the fader fast while audio plays — no clicks or zipper noise.
+
+**Status: built and verified.** Details, measurements and diagrams are in
+[Smoothing & the audio loop](smoothing-and-the-audio-loop.md). Where the build differs from the
+plan above:
+
+- **Pointers:** the loop fetches the whole pointer array once with `getArrayOfWritePointers()`
+  rather than calling `getWritePointer(channel)` per sample.
+- **Added an `isSmoothing()` fast path:** a steady gain is one `applyGain`, and the per-sample
+  loop only runs during the 20 ms glide.
+- **`Linear` smoothing, as planned.** JUCE's own docs recommend `Multiplicative` for values in dB;
+  the measured difference is in that doc's section on smoothing modes.
 
 ---
 
