@@ -48,12 +48,12 @@ Honestly: **no, but it's a perfectly good choice, and it's arguably the best on 
 
 Roughly what the industry uses:
 
-| Tool | Where | Notes |
-|---|---|---|
-| **Xcode** | macOS | The most common for Mac audio work. Best debugger for Apple frameworks, required for AU3/iOS and App Store submission. |
-| **Visual Studio** | Windows | Dominant on Windows. Excellent debugger. |
-| **CLion** | Cross-platform | Popular with people who want *one* IDE for Mac+Windows+Linux. CMake-native, so no generated project files to babysit. Strong refactoring. |
-| **VS Code** | Cross-platform | Lightweight, very common, weaker debugging than the above. |
+| Tool              | Where          | Notes                                                                                                                                     |
+|-------------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| **Xcode**         | macOS          | The most common for Mac audio work. Best debugger for Apple frameworks, required for AU3/iOS and App Store submission.                    |
+| **Visual Studio** | Windows        | Dominant on Windows. Excellent debugger.                                                                                                  |
+| **CLion**         | Cross-platform | Popular with people who want *one* IDE for Mac+Windows+Linux. CMake-native, so no generated project files to babysit. Strong refactoring. |
+| **VS Code**       | Cross-platform | Lightweight, very common, weaker debugging than the above.                                                                                |
 
 The key insight: **because we chose CMake, the IDE doesn't matter.** CMake can generate an
 Xcode project (`cmake -G Xcode`), a Visual Studio solution, or Makefiles — from the exact same
@@ -73,10 +73,10 @@ alternative to `make`.
 Remember the two stages: CMake **generates** build files, then a build tool **executes** them.
 CMake can generate for either:
 
-| Generator | Build tool | Speed |
-|---|---|---|
-| `Unix Makefiles` (default on macOS) | `make` — 1976, universal | Fine |
-| `Ninja` | `ninja` — built by Google, designed purely for speed | Noticeably faster |
+| Generator                           | Build tool                                           | Speed             |
+|-------------------------------------|------------------------------------------------------|-------------------|
+| `Unix Makefiles` (default on macOS) | `make` — 1976, universal                             | Fine              |
+| `Ninja`                             | `ninja` — built by Google, designed purely for speed | Noticeably faster |
 
 Ninja is faster mainly at *incremental* builds: it tracks dependencies more precisely and
 parallelises better, so changing one file rebuilds less.

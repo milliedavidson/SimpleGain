@@ -13,7 +13,7 @@ fixes it, and the C++ you meet on the way — loop order, raw pointers, denormal
 ## In short
 
 - **Zipper noise** is a staircase of tiny clicks. Phase 3 read the fader once per block and used
-  that one value for every sample in it, so dragging the fader became steps — and a step in the
+  that one value for every sample in it, so dragging the fader became steps. A step in the
   gain is an abrupt jump in the waveform, which the ear hears as a click.
 - **`juce::SmoothedValue`** fixes it by gliding to the new gain over 20 ms, one small step per
   *sample*. Measured on the real plugin: the biggest change between two adjacent samples fell
@@ -46,15 +46,15 @@ sound.
 ![Gain that steps vs gain that ramps](images/gain-steps-vs-ramp.svg)
 
 The diagram's numbers aren't illustrative. I fed a constant `1.0` through the real processor,
-so every output sample *is* the gain applied to it, and measured the largest change between two
+so every output sample *is* the gain applied to it. Then I measured the largest change between two
 adjacent samples after a single +24 dB fader move (a gain change of 14.85):
 
 | Sample rate / block | Phase 3 (per block) | Phase 4 ideal step | Phase 4 measured | Settles within 1% in |
-|---|---|---|---|---|
-| 48 kHz / 512 | 14.849 | 0.01547 | 0.01547 | 19.79 ms |
-| 48 kHz / 64 | 14.849 | 0.01547 | 0.01547 | 19.79 ms |
-| 96 kHz / 512 | 14.849 | 0.00773 | 0.00821 | 19.79 ms |
-| 44.1 kHz / 256 | 14.849 | 0.01684 | 0.01695 | 19.80 ms |
+|---------------------|---------------------|--------------------|------------------|----------------------|
+| 48 kHz / 512        | 14.849              | 0.01547            | 0.01547          | 19.79 ms             |
+| 48 kHz / 64         | 14.849              | 0.01547            | 0.01547          | 19.79 ms             |
+| 96 kHz / 512        | 14.849              | 0.00773            | 0.00821          | 19.79 ms             |
+| 44.1 kHz / 256      | 14.849              | 0.01684            | 0.01695          | 19.80 ms             |
 
 Two things to notice:
 
@@ -96,7 +96,7 @@ down. When the countdown reaches zero it lands on the target. All of this is in
 - **The ramp is 20 ms of real time at any sample rate**, because `reset` takes the sample rate:
   960 samples at 48 kHz, 882 at 44.1 kHz, 1,920 at 96 kHz.
 - **It doesn't depend on the host's block size.** The simpler alternative, `AudioBuffer`'s
-  `applyGainRamp`, ramps over the samples you pass it — typically one block — so its ramp would
+  `applyGainRamp`, ramps over the samples you pass it, typically one block. Its ramp would
   be 1.3 ms at 64 samples and 10.7 ms at 512 (see [Hosting & threads §8](plugin-hosting-and-threads.md#8-samples-vs-blocks)).
   `SmoothedValue` keeps the 20 ms constant and carries the glide across several blocks.
 - **Why 20 ms:** long enough that each step is tiny, short enough to feel immediate. It's a
@@ -113,18 +113,18 @@ The plan specified Linear, so that's what the code uses. Here's what the two act
 loudness over a 20 ms glide (measured; a perfectly even glide would hit 10% / 50% / 90% of the
 way at the same fractions of the dB change):
 
-| Move | Mode | 10% through | 50% through | 90% through |
-|---|---|---|---|---|
-| 0 → +24 dB | **Linear** | +7.91 dB | +18.51 dB | +23.15 dB |
-| | Multiplicative | +2.40 dB | +12.00 dB | +21.60 dB |
-| 0 → −60 dB | **Linear** | −0.91 dB | −6.01 dB | −19.92 dB |
-| | Multiplicative | −6.00 dB | −30.00 dB | −54.00 dB |
+| Move       | Mode           | 10% through | 50% through | 90% through |
+|------------|----------------|-------------|-------------|-------------|
+| 0 → +24 dB | **Linear**     | +7.91 dB    | +18.51 dB   | +23.15 dB   |
+|            | Multiplicative | +2.40 dB    | +12.00 dB   | +21.60 dB   |
+| 0 → −60 dB | **Linear**     | −0.91 dB    | −6.01 dB    | −19.92 dB   |
+|            | Multiplicative | −6.00 dB    | −30.00 dB   | −54.00 dB   |
 
-Neither clicks — both move in tiny steps. But Linear is lopsided in dB, which is how loudness is
-heard: pulling the fader to the bottom stays within 6 dB of full volume for half the glide, then
-drops the last ~40 dB in about 2 ms. Multiplicative would give an even slide. At 20 ms the
-audible difference is probably small, and I haven't compared them by ear. Switching is a
-one-word change (`Linear` → `Multiplicative`); it can't ever reach exactly 0, which is fine here
+Neither clicks, because both move in tiny steps. But Linear is lopsided in dB, which is how
+loudness is heard. Pulling the fader to the bottom stays within 6 dB of full volume for half the
+glide, then drops the last ~40 dB in about 2 ms. Multiplicative would give an even slide. At 20 ms
+the audible difference is probably small, and I haven't compared them by ear. Switching is a
+one-word change (`Linear` → `Multiplicative`). It can't ever reach exactly 0, which is fine here
 because our minimum is −60 dB, a gain of 0.001.
 
 ---
@@ -173,13 +173,13 @@ Swap the loops — channels outer, samples inner, with the one shared smoother �
 uses up the entire block's worth of ramp steps. Channel 1 then carries on from where channel 0
 stopped. I measured it (512-sample block, 48 kHz, +24 dB move):
 
-| | First sample's gain | Biggest step inside the block |
-|---|---|---|
-| Channel 0 | 1.0155 (correct) | 0.0155 |
-| Channel 1 | **8.9349** | 0.0155 |
+|           | First sample's gain | Biggest step inside the block |
+|-----------|---------------------|-------------------------------|
+| Channel 0 | 1.0155 (correct)    | 0.0155                        |
+| Channel 1 | **8.9349**          | 0.0155                        |
 
 Channel 1 starts the block already 512 steps into the ramp. Inside the block each channel looks
-smooth, which is what makes this bug sneaky — the damage is that **left and right disagree on
+smooth, which is what makes this bug sneaky. The damage is that **left and right disagree on
 all 512 samples** (so the stereo image swings), and channel 1 jumps by about 7.9 at the block
 boundary. With a block of 960 samples or more, channel 1 would get no smoothing at all and take
 the full jump at once.
@@ -232,11 +232,11 @@ second indexes into the array it points at. For a pointer `p`, `p[i]` means exac
 
 **Compared with C#**
 
-| | C# | C++ here |
-|---|---|---|
-| Shape | `float[][]` (jagged array) | `float* const*` |
+|                 | C#                               | C++ here                                                                             |
+|-----------------|----------------------------------|--------------------------------------------------------------------------------------|
+| Shape           | `float[][]` (jagged array)       | `float* const*`                                                                      |
 | Bounds checking | yes — `IndexOutOfRangeException` | **none** — reading `channels[0][numSamples]` reads whatever memory follows, silently |
-| Ownership | the array owns its data | a **view** into the host's memory; we never free it |
+| Ownership       | the array owns its data          | a **view** into the host's memory; we never free it                                  |
 
 The nearest modern C# analogue is a `Span<float>` over memory you don't own.
 
@@ -257,15 +257,15 @@ and many CPUs handle them through a slow path — dramatically slower than norma
 
 They appear where signals decay toward silence: reverb and filter tails, feedback loops, long
 fades. **SimpleGain's single multiply makes very few of its own**, so for this plugin it's
-mostly a defensive habit — but a plugin often receives them from whatever sits before it on the
+mostly a defensive habit. But a plugin often receives them from whatever sits before it on the
 track, and it's the first thing to add once the DSP involves feedback.
 
 ```cpp
 juce::ScopedNoDenormals noDenormals;
 ```
 
-I read what it does in JUCE's source: the constructor **sets the CPU's flush-to-zero bits** (in
-the SSE control register on Intel, the `FZ` bit on Arm) and remembers the old value; the
+I read what it does in JUCE's source. The constructor **sets the CPU's flush-to-zero bits** (in
+the SSE control register on Intel, the `FZ` bit on Arm) and remembers the old value, and the
 destructor puts it back. Until the end of `processBlock`, denormals count as zero.
 
 That makes it **RAII** again — the same idea as C#'s `using`, but automatic (see
@@ -292,9 +292,9 @@ when `processBlock` has a few milliseconds.
 it, so hosts hand us `float`.
 
 **Where `double` still earns its place:** anything that accumulates or recurses, where rounding
-error compounds. §1 showed a small case — adding a step 1,920 times in `float` left an error
+error compounds. See §1 for a small case: adding a step 1,920 times in `float` left an error
 that surfaced as the final landing step. It's why the *time* values here (`sampleRate`,
-`gainRampSeconds`) are `double`: they're not audio, and the precision is free.
+`gainRampSeconds`) are `double`. They're not audio, and the precision is free.
 
 **A pitfall:** in C++ a literal like `0.5` is a `double`, and `x * 0.5` with a `float x` quietly
 does the maths in double. C# has the same literal rule but refuses to narrow the result back

@@ -427,6 +427,6 @@ add_custom_target(check
 **`add_test`** registers the program with CTest, which runs it and treats exit code 0 as a pass.
 **`check`** is a convenience: a custom target that depends on the test app, so
 `cmake --build build --target check` builds it first and then runs CTest. `$<CONFIG>` is the
-build type (Debug, Release), which multi-configuration generators such as Xcode need; and
+build type (Debug, Release), which multi-configuration generators such as Xcode need.
 `--output-on-failure` keeps passing tests quiet and shows the full output of failing ones.
 

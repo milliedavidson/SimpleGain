@@ -66,12 +66,12 @@ function is. It only knows how to shuffle text around.
 
 It obeys the lines starting with `#`:
 
-| Directive | What it does |
-|---|---|
-| `#include "foo.h"` | Replace this line with the entire contents of `foo.h` |
-| `#define X 1` | From here on, replace the text `X` with the text `1` |
-| `#ifdef` / `#if` / `#endif` | Keep or delete this block of text |
-| `#pragma` | A compiler-specific instruction (see §3) |
+| Directive                   | What it does                                          |
+|-----------------------------|-------------------------------------------------------|
+| `#include "foo.h"`          | Replace this line with the entire contents of `foo.h` |
+| `#define X 1`               | From here on, replace the text `X` with the text `1`  |
+| `#ifdef` / `#if` / `#endif` | Keep or delete this block of text                     |
+| `#pragma`                   | A compiler-specific instruction (see §3)              |
 
 So when `CMakeLists.txt` said `JUCE_WEB_BROWSER=0`, it defined a macro. Inside JUCE there's
 code like:
@@ -215,13 +215,13 @@ numbers.
 
 An object file contains:
 
-| Part | What it is |
-|---|---|
-| **Machine code** | The actual CPU instructions for the functions in this file |
-| **Data** | String literals, constants, static variables |
-| **Exported symbols** | "I contain these functions, at these offsets" |
-| **Undefined symbols** | "I *call* these functions, but I don't have them" |
-| **Relocations** | "Once you know the real addresses, patch them in at these spots" |
+| Part                  | What it is                                                       |
+|-----------------------|------------------------------------------------------------------|
+| **Machine code**      | The actual CPU instructions for the functions in this file       |
+| **Data**              | String literals, constants, static variables                     |
+| **Exported symbols**  | "I contain these functions, at these offsets"                    |
+| **Undefined symbols** | "I *call* these functions, but I don't have them"                |
+| **Relocations**       | "Once you know the real addresses, patch them in at these spots" |
 
 It is not executable. It has no `main`, no idea where anything else lives, and the OS can't run
 it. It only becomes runnable after the **linker** fills in every blank.
@@ -305,10 +305,10 @@ the undefined to the defined, patches the real address into the blank, and it's 
 
 ### Declaration vs definition — the vocabulary
 
-| | What it is | Where it lives | How many allowed |
-|---|---|---|---|
-| **Declaration** | The signature. A promise that this exists somewhere. | `.h` | As many as you like |
-| **Definition** | The body. The actual code. | `.cpp` | **Exactly one** |
+|                 | What it is                                           | Where it lives | How many allowed    |
+|-----------------|------------------------------------------------------|----------------|---------------------|
+| **Declaration** | The signature. A promise that this exists somewhere. | `.h`           | As many as you like |
+| **Definition**  | The body. The actual code.                           | `.cpp`         | **Exactly one**     |
 
 That "exactly one" is the **One Definition Rule**, and it's why headers hold declarations while
 `.cpp` files hold definitions. A header gets pasted into many `.cpp` files — so if it held a
@@ -349,8 +349,8 @@ Two things make it notable:
 - **It's written in C#** — the C# compiler is itself a C# program. (Common, this; it's called
   self-hosting.)
 - **It's a "compiler as a service."** It exposes its syntax trees and semantic model as an API,
-  which is why IntelliSense, "Find all references", Rename, and analyzers all work so well:
-  they're asking the actual compiler, not a separate parser that approximates it.
+  which is why IntelliSense, "Find all references", Rename, and analysers all work so well.
+  They're asking the actual compiler, not a separate parser that approximates it.
 
 The C++ equivalent in our project is **clang**, which similarly exposes its internals — that's
 how CLion does its code intelligence.
@@ -390,12 +390,12 @@ exact chip it finds itself on.
 The cost: a startup warm-up, a runtime that must be installed, and — the one that matters to us
 — **a garbage collector that can pause your thread whenever it likes.**
 
-| | C# | C++ |
-|---|---|---|
-| Compiler output | IL bytecode in a `.dll` | Real machine code |
-| Needs a runtime installed? | Yes (.NET) | No |
-| When does it become machine code? | At run time, by the JIT | At build time |
-| Startup | JIT warm-up | Instant |
+|                                   | C#                      | C++               |
+|-----------------------------------|-------------------------|-------------------|
+| Compiler output                   | IL bytecode in a `.dll` | Real machine code |
+| Needs a runtime installed?        | Yes (.NET)              | No                |
+| When does it become machine code? | At run time, by the JIT | At build time     |
+| Startup                           | JIT warm-up             | Instant           |
 
 This is why our plugin had to be built for `x86_64` specifically, and why shipping to Apple
 Silicon users means building a second architecture.
@@ -409,12 +409,12 @@ Silicon users means building a second architecture.
 They're two different *moments in the life of your program*, and the distinction matters mainly
 because it determines **when a given mistake is discovered**.
 
-| Phase | When | Who's running | Typical failure |
-|---|---|---|---|
-| **Compile time** | You press Build | The compiler | `error: no member named 'gian'` |
-| **Link time** | Straight after | The linker | `undefined symbol: getName()` |   
-| **Load time** | User double-clicks | The OS loader | `dylib not found` |
-| **Run time** | While it's running | Your code, on the CPU | Crash, wrong output, audio click |
+| Phase            | When               | Who's running         | Typical failure                  |
+|------------------|--------------------|-----------------------|----------------------------------|
+| **Compile time** | You press Build    | The compiler          | `error: no member named 'gian'`  |
+| **Link time**    | Straight after     | The linker            | `undefined symbol: getName()`    |
+| **Load time**    | User double-clicks | The OS loader         | `dylib not found`                |
+| **Run time**     | While it's running | Your code, on the CPU | Crash, wrong output, audio click |
 
 **Link time** is the last moment of *building*. The linker has every `.o`, and its job is
 matching every "I need X" to a "here is X". Nothing is executing — it's just resolving names
@@ -470,13 +470,13 @@ $ file build/.../SimpleGain
 SimpleGain: Mach-O 64-bit executable x86_64
 ```
 
-That binary will not run on an Apple Silicon Mac at all (different instructions entirely) and
-obviously not on Windows (different OS, different binary format — `.exe`/`.dll` vs Mach-O). To
-support Apple Silicon too, the same source gets **compiled a second time**, targeting `arm64`,
-and macOS lets you glue both results into one file — a **"universal binary"** (also called a
-"fat binary"): one file on disk containing two complete compiled copies, and the OS picks the
-right slice at launch. This is the `CMAKE_OSX_ARCHITECTURES "x86_64;arm64"` line mentioned in
-Phase 8 of the plan. Windows and Linux don't have this trick — there you'd ship genuinely
+That binary will not run on an Apple Silicon Mac at all, because the instructions are different
+entirely. It won't run on Windows either: different OS, different binary format (`.exe`/`.dll` vs
+Mach-O). To support Apple Silicon too, the same source gets **compiled a second time**, targeting
+`arm64`. Apple's macOS lets you glue both results into one file, a **"universal binary"** (also
+called a "fat binary"). That's one file on disk containing two complete compiled copies, and the OS
+picks the right slice at launch. This is the `CMAKE_OSX_ARCHITECTURES "x86_64;arm64"` line mentioned
+in Phase 8 of the plan. Windows and Linux don't have this trick, so there you'd ship genuinely
 separate installers per platform.
 
 So for architecture: **same source, compiled twice, into either two files or one glued-together
@@ -501,16 +501,16 @@ into `libSimpleGain_SharedCode.a`. Then each format target (`SimpleGain_Standalo
 `SimpleGain_AU`, `SimpleGain_VST3`) **links that same object code** against a different thin
 JUCE-provided wrapper:
 
-| Target | Extra wrapper file | What it implements |
-|---|---|---|
-| Standalone | `juce_audio_plugin_client_Standalone.cpp` | a real `main()`, a window, a connection to CoreAudio |
-| AU | `juce_audio_plugin_client_AU_1/2.mm` | the Apple `AudioComponent` entry points Logic expects |
-| VST3 | `juce_audio_plugin_client_VST3.mm` | Steinberg's `IPluginFactory` interface Ableton/Reaper expect |
+| Target     | Extra wrapper file                        | What it implements                                           |
+|------------|-------------------------------------------|--------------------------------------------------------------|
+| Standalone | `juce_audio_plugin_client_Standalone.cpp` | a real `main()`, a window, a connection to CoreAudio         |
+| AU         | `juce_audio_plugin_client_AU_1/2.mm`      | the Apple `AudioComponent` entry points Logic expects        |
+| VST3       | `juce_audio_plugin_client_VST3.mm`        | Steinberg's `IPluginFactory` interface Ableton/Reaper expect |
 
-Each wrapper's whole job is: satisfy that format's specific contract, then internally construct
-our `SimpleGainAudioProcessor` and forward the host's calls straight into `processBlock`,
-`prepareToPlay`, etc. — the same methods regardless of which host is calling. That's the entire
-value JUCE adds here: without it, you'd hand-write your own AU component and your own VST3
+Each wrapper's whole job is to satisfy that format's specific contract. Then it internally
+constructs our `SimpleGainAudioProcessor` and forwards the host's calls straight into `processBlock`,
+`prepareToPlay`, etc. These are the same methods regardless of which host is calling. That's the
+entire value JUCE adds here. Without it, you'd hand-write your own AU component and your own VST3
 factory, which is a large amount of format-specific boilerplate that has nothing to do with
 your actual DSP.
 

@@ -1,8 +1,7 @@
 # The editor (GUI)
 
-How the plugin window is built: what an editor is, how the knob is wired to the gain parameter
-in both directions, why the order of member variables matters, and how a GUI gets tested with no
-screen at all.
+How the plugin window is built. It covers what an editor is, how the knob is wired to the
+parameter in both directions, why member order matters, and how a GUI gets tested with no screen.
 
 **SimpleGain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · **The editor (GUI)**  
@@ -24,12 +23,14 @@ screen at all.
   We write no listener code ourselves.
 - **Member order is a correctness rule.** C++ destroys members in reverse order of declaration,
   and the attachment's destructor touches the slider, so the attachment is declared *after* the
-  slider.
+  slider. The look-and-feel goes *first*, so it outlives everything that uses it.
 - **`paint()` draws, `resized()` positions.** JUCE calls both; we never do. Every size is a
   fraction of the window, so the whole layout scales.
 - **The window resizes** between 75% and 200% of its opening size, always keeping its shape.
+- **A `LookAndFeel` is JUCE's theme.** Ours makes the value text scale with its box. It's one
+  small class, and it has to be detached again in the destructor.
 - **It's tested without a screen.** JUCE can build a component, lay it out and paint it into an
-  image in memory. 10 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
+  image in memory. 11 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
 - **Nothing permanent changed.** The parameter id, range and saved format are untouched; the
   editor only *reads and writes* the parameter.
 
@@ -52,13 +53,13 @@ SimpleGainAudioProcessorEditor     (the window)
 └── gainSlider                     (a juce::Slider, which owns its own value text box)
 ```
 
-| JUCE | WPF | WinForms |
-|---|---|---|
-| `juce::Component` | `UIElement` / `FrameworkElement` | `Control` |
-| `addAndMakeVisible (child)` | adding to `Children` | `Controls.Add (child)` |
-| `paint (Graphics&)` | `OnRender` | `OnPaint` |
-| `resized()` | `ArrangeOverride` | `OnResize` / `Layout` |
-| `juce::Slider` | `Slider` | `TrackBar` |
+| JUCE                        | WPF                              | WinForms               |
+|-----------------------------|----------------------------------|------------------------|
+| `juce::Component`           | `UIElement` / `FrameworkElement` | `Control`              |
+| `addAndMakeVisible (child)` | adding to `Children`             | `Controls.Add (child)` |
+| `paint (Graphics&)`         | `OnRender`                       | `OnPaint`              |
+| `resized()`                 | `ArrangeOverride`                | `OnResize` / `Layout`  |
+| `juce::Slider`              | `Slider`                         | `TrackBar`             |
 
 Two things differ from what a C# developer expects:
 
@@ -136,13 +137,13 @@ gainAttachment (p.apvts, "gain", gainSlider)
 `AudioProcessorValueTreeState::SliderAttachment` connects a slider to a parameter by id. After
 it runs:
 
-| Event | What happens |
-|---|---|
-| The knob starts | It's moved to the parameter's current value, not the default. |
-| The user turns the knob | The parameter is set, and the host is told it's being edited, so a recording automation lane captures the movement. |
-| The user double-clicks the knob | It resets to the parameter's default, 0 dB. |
-| The user types `-12` in the box | It's parsed with the *parameter's* text rules and applied. |
-| The host automates the parameter | The knob moves to match. |
+| Event                            | What happens                                                                                                        |
+|----------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| The knob starts                  | It's moved to the parameter's current value, not the default.                                                       |
+| The user turns the knob          | The parameter is set, and the host is told it's being edited, so a recording automation lane captures the movement. |
+| The user double-clicks the knob  | It resets to the parameter's default, 0 dB.                                                                         |
+| The user types `-12` in the box  | It's parsed with the *parameter's* text rules and applied.                                                          |
+| The host automates the parameter | The knob moves to match.                                                                                            |
 
 The attachment also **replaces the slider's own range and text functions with the parameter's**.
 That's why the box reads `−6.0 dB`, not `-6` — the text lambda from
@@ -156,9 +157,9 @@ place.
 <Slider Value="{Binding Gain, Mode=TwoWay}" Minimum="-60" Maximum="30" />
 ```
 
-Same idea — the view and the model stay in sync without hand-written event handlers — but
-here it's an object you construct, not markup, and it has to be kept *alive* for the binding to
-hold (the next section).
+Same idea: the view and the model stay in sync without hand-written event handlers. The
+difference is that here it's an object you construct, not markup, and it has to be kept *alive* for
+the binding to hold (the next section).
 
 **Threads.** The host may change the parameter from any thread, but a component may only be
 touched on the message thread. The attachment handles this: if the change arrives on another
@@ -172,6 +173,7 @@ write that code ourselves — which is exactly why we use the attachment.
 The members are declared in this order:
 
 ```cpp
+SimpleGainLookAndFeel lookAndFeel;
 juce::Label titleLabel;
 juce::Slider gainSlider;
 juce::AudioProcessorValueTreeState::SliderAttachment gainAttachment;
@@ -181,12 +183,14 @@ C++ **constructs members top to bottom in declaration order, and destroys them b
 — regardless of the order in the constructor's initialiser list. So here:
 
 ```
-construct:  titleLabel → gainSlider → gainAttachment
-destroy:    gainAttachment → gainSlider → titleLabel
+construct:  lookAndFeel → titleLabel → gainSlider → gainAttachment
+destroy:    gainAttachment → gainSlider → titleLabel → lookAndFeel
 ```
 
 That's right, because of what each part does:
 
+- The look-and-feel (section 9) is used by the widgets, so it has to be built before them and
+  destroyed after them.
 - The attachment's *constructor* uses the slider, so the slider has to exist first.
 - The attachment's *destructor* calls `slider.removeListener (this)`. If the slider were already
   gone, that would touch freed memory — a use-after-free, the bug described in
@@ -280,14 +284,61 @@ setSize (defaultWidth, defaultHeight);
 Not every host honours these limits (some plugin hosts fix the window size). The editor stays
 correct either way, because `resized()` copes with whatever size it's handed.
 
-**Known limitation.** The value text (`0.0 dB`) keeps JUCE's default 15-point font at every
-size, so at the largest window it looks small next to the knob. Scaling it would mean giving the
-slider a custom `LookAndFeel`, which is more machinery than this phase warrants. It's noted here
-rather than hidden.
+The value text (`0.0 dB`) scales with the window too, which takes a custom look-and-feel:
+see the next section. Until that was added it stayed at JUCE's default 15 points at every size
+and looked tiny beside the knob at the largest window.
 
 ---
 
-## 9. Wiring it in: `createEditor()`
+## 9. A look-and-feel: making the value text scale
+
+JUCE draws every widget through a **`LookAndFeel`**: one object holding the drawing code for
+buttons, sliders, labels and so on, like a theme or a WPF `Style`/`ControlTemplate`. You change
+how something looks by subclassing `LookAndFeel_V4` (JUCE's modern default) and overriding only the
+parts you want. Ours overrides one function:
+
+```cpp
+juce::Font SimpleGainLookAndFeel::getLabelFont (juce::Label& label)
+{
+    if (dynamic_cast<juce::Slider*> (label.getParentComponent()) != nullptr)
+        return juce::FontOptions (static_cast<float> (label.getHeight()) * 0.5f);
+
+    return LookAndFeel_V4::getLabelFont (label);
+}
+```
+
+JUCE asks this every time it draws a label, and when a person starts typing into the box.
+
+- **The font is half the box's height.** The box height is already a fraction of the window
+  (section 7). So the text scales with the window *and can never overflow its box*, with no
+  separate font-size maths to keep in step with the layout.
+- **It only touches the knob's box.** A slider's value box is a `Label` whose parent is the slider,
+  which is what `dynamic_cast` checks. `dynamic_cast<Slider*>` is C++'s `as`: it gives the
+  pointer back if the object really is that type and `nullptr` if not (C#: `label.Parent as Slider`).
+  Every other label, including our title, falls through to the base class.
+- **The base class does the rest.** Everything we don't override keeps JUCE's default look.
+
+**Two rules come with a look-and-feel**, and the compiler enforces neither:
+
+1. **It must outlive everything that uses it.** `setLookAndFeel (&lookAndFeel)` stores a *pointer*;
+   the editor doesn't own it, and JUCE says so in the function's documentation. So the
+   look-and-feel is a member declared first (section 5).
+2. **Detach it in the destructor.** `setLookAndFeel (nullptr)` runs while the children still exist.
+   Skip it and JUCE's own destructor assertion fires: *"you tried to delete a LookAndFeel while
+   something is still using it"*. That assertion is only a log message in a Debug build, so by
+   default no test fails. The test app therefore **counts JUCE assertions and fails the run if any
+   fire** (`tests/main.cpp`), which is what makes forgetting this visible.
+
+One of the deliberate breakages, declaring the look-and-feel *after* the slider, was **not**
+caught, and shouldn't be. With the detach in place, member order stops mattering, so that program is
+just as correct as the original. (This is called an equivalent mutant.) Both habits are kept anyway,
+because they cost nothing and either alone would catch a slip in the other.
+
+![The value text at three window sizes](images/editor-sizes.png)
+
+---
+
+## 10. Wiring it in: `createEditor()`
 
 The processor decides what window it shows:
 
@@ -310,29 +361,32 @@ the whole change. A test checks it hasn't been swapped back.
 
 ---
 
-## 10. Testing a GUI with no screen
+## 11. Testing a GUI with no screen
 
 A common assumption is that GUIs can't be tested automatically. They can, as far as *behaviour*
-goes, because a component doesn't need a window to exist. The 10 tests in
-`tests/EditorTests.cpp` (group **Editor**, 103 checks) create the real editor and drive it:
+goes, because a component doesn't need a window to exist. The 11 tests in
+`tests/EditorTests.cpp` (group **Editor**, 107 checks) create the real editor and drive it:
 
-| Test | What it proves |
-|---|---|
-| The plugin offers its own editor | `createEditor()` returns *our* editor, not JUCE's generic one |
-| Opens inside its resize limits | The opening size and aspect ratio are consistent with the constrainer |
-| The knob starts at the fader's position | A plugin reopened at −6 dB doesn't show 0 |
-| Turning the knob moves the parameter | Knob → parameter, across the whole range |
-| The host moves the parameter, the knob follows | Parameter → knob, across the whole range |
-| The text box shows and accepts the right text | `−6.0 dB` out, `-12`, `-12 dB` and `+4.5` in |
-| Range and double-click reset | −60..+30 and a 0 dB reset |
-| Layout at every size | Nothing sticks out of the window at the minimum, opening and maximum sizes |
-| It actually draws | The gradient and the knob are really in the image |
-| Opening and closing | 50 open/close cycles, and the parameter moving while *no* editor exists |
+| Test                                           | What it proves                                                                    |
+|------------------------------------------------|-----------------------------------------------------------------------------------|
+| The plugin offers its own editor               | `createEditor()` returns *our* editor, not JUCE's generic one                     |
+| Opens inside its resize limits                 | The opening size and aspect ratio are consistent with the constrainer             |
+| The knob starts at the fader's position        | A plugin reopened at −6 dB doesn't show 0                                         |
+| Turning the knob moves the parameter           | Knob → parameter, across the whole range                                          |
+| The host moves the parameter, the knob follows | Parameter → knob, across the whole range                                          |
+| The text box shows and accepts the right text  | `−6.0 dB` out, `-12`, `-12 dB` and `+4.5` in                                      |
+| Range and double-click reset                   | −60..+30 and a 0 dB reset                                                         |
+| Layout at every size                           | Nothing sticks out of the window at the minimum, opening and maximum sizes        |
+| The value text scales                          | It grows with the window, always fits its box, and the title's font is left alone |
+| It actually draws                              | The gradient and the knob are really in the image                                 |
+| Opening and closing                            | 50 open/close cycles, and the parameter moving while *no* editor exists           |
 
 The tests were **written first**. Against the old generic editor, 8 tests passed and 10 failed; then the editor made them
-pass. Afterwards the editor was deliberately broken in ten ways to prove the tests notice, and all ten
-were caught (see [Testing](testing.md#how-i-know-they-can-fail)). The first round caught only nine
-of ten, and the one that survived, an invisible knob, led to a stronger "it draws" test.
+pass. The look-and-feel test was written the same way: it failed with the text stuck at 15 points,
+then passed. Afterwards the editor was deliberately broken in fifteen ways to prove the tests notice, and
+all fifteen were caught (see [Testing](testing.md#how-i-know-they-can-fail)). Some were only caught
+after I fixed the tests: an invisible knob slipped past the first "it draws" test, and forgetting
+to detach the look-and-feel was invisible until the test app began counting JUCE's assertions.
 
 What they *can't* prove is that it looks good, or feels good to drag. For that, there's a
 **snapshot mode**:

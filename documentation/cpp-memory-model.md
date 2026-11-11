@@ -148,12 +148,12 @@ Confusingly `&` in a *type* means something else: `int& r = x;` declares a refer
 
 ### Reference vs pointer vs C#
 
-| | C++ reference `&` | C++ pointer `*` | C# class variable |
-|---|---|---|---|
-| Can be null? | **No** | Yes | Yes |
-| Can be re-pointed? | **No** | Yes | Yes |
-| Must be initialised? | **Yes** | No | No |
-| Syntax to use it | `r.foo()` | `p->foo()` | `r.foo()` |
+|                      | C++ reference `&` | C++ pointer `*` | C# class variable |
+|----------------------|-------------------|-----------------|-------------------|
+| Can be null?         | **No**            | Yes             | Yes               |
+| Can be re-pointed?   | **No**            | Yes             | Yes               |
+| Must be initialised? | **Yes**           | No              | No                |
+| Syntax to use it     | `r.foo()`         | `p->foo()`      | `r.foo()`         |
 
 A C# class variable behaves most like a **C++ pointer** — it can be null, it can be reassigned,
 and it refers to something elsewhere. A C++ *reference* is stricter than anything C# has: it
@@ -247,13 +247,13 @@ modern C++ rarely writes a bare `new` and almost never writes `delete`.**
 
 It's a genuine trade-off, not an oversight:
 
-| | C++ / RAII | C# / GC |
-|---|---|---|
-| **When cleanup happens** | Exactly, predictably | Eventually, unknowably |
-| **Cost at runtime** | Zero — it's compiled in | GC scans and pauses |
-| **Cycles** (A holds B holds A) | **Leaks** unless you're careful | Handled fine |
-| **Use-after-free** | Possible; your bug | Impossible |
-| **Cognitive load** | Ownership is your job | Mostly free |
+|                                | C++ / RAII                      | C# / GC                |
+|--------------------------------|---------------------------------|------------------------|
+| **When cleanup happens**       | Exactly, predictably            | Eventually, unknowably |
+| **Cost at runtime**            | Zero — it's compiled in         | GC scans and pauses    |
+| **Cycles** (A holds B holds A) | **Leaks** unless you're careful | Handled fine           |
+| **Use-after-free**             | Possible; your bug              | Impossible             |
+| **Cognitive load**             | Ownership is your job           | Mostly free            |
 
 C# optimises for *safety and ease*: you cannot use freed memory, you cannot leak a cycle, and
 you never think about ownership. The price is unpredictable pauses — fatal for audio.
@@ -285,7 +285,7 @@ confusion.
 
 Those sound like they should mean the same thing, but they don't. **Freeing memory does not
 make it "available for you."** It makes it available for **the allocator to hand to anyone,
-including something completely unrelated to you** — and crucially, it does **not** erase or
+including something completely unrelated to you**. Crucially, it does **not** erase or
 lock the memory. The old bytes are usually left exactly where they were, untouched, until
 *something else* happens to get allocated there.
 
@@ -320,9 +320,9 @@ stranger's belongings — and they have no idea why their suitcase moved.
 
 ### Why this matters more than a normal bug
 
-This bug class is famous enough to have its own name — **use-after-free (UAF)** — and it's a
-staple of real security exploits (an attacker deliberately arranges for freed memory to be
-reused with attacker-controlled data, then triggers the dangling read/write). It's not just an
+This bug class is famous enough to have its own name: **use-after-free (UAF)**. It's a
+staple of real security exploits, where an attacker deliberately arranges for freed memory to be
+reused with attacker-controlled data, then triggers the dangling read/write. It's not just an
 academic C++ hazard.
 
 ### Why C# structurally cannot have this bug
@@ -337,7 +337,7 @@ return.
 ### How modern C++ avoids it
 
 Mostly by not writing bare `delete` at all. `std::unique_ptr` (§4 of the plan) frees its object
-exactly once, automatically, when it goes out of scope — there's no second place in the code
+exactly once, automatically, when it goes out of scope. There's no second place in the code
 that could `delete` it again or too early. `std::shared_ptr` extends that to "free it once the
-*last* owner is gone." Raw `new`/`delete` still exist and still work, but seeing one in code
+*last* owner is gone." Raw `new`/`delete` still exist and still work. Seeing one in code
 written after about 2013 is a reasonable thing to be suspicious of.

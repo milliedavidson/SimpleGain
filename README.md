@@ -7,17 +7,17 @@
 **SimpleGain** is a volume/gain plugin for Logic, GarageBand, Reaper, Ableton and friends,
 built from absolute scratch using [JUCE](https://juce.com/) and CMake.
 
-This is a **test / learning project**, not a polished product — I'm a C# developer teaching
-myself C++ and audio DSP, one plugin at a time, and gain is deliberately the simplest possible
+This is a **test / learning project**, not a polished product. I'm a C# developer teaching
+myself C++ and audio DSP, one plugin at a time. Gain is deliberately the simplest possible
 starting point: the actual signal processing is one multiply. All the real learning is in the
-*architecture*; how a plugin talks to a host, how the audio thread's rules differ from
-everything else you've written and what C++ is doing that C# quietly does for you.
+*architecture*. That means how a plugin talks to a host, how the audio thread's rules differ from
+everything else you've written, and what C++ is doing that C# quietly does for you.
 
 Because of that, **the code is littered with comments** and is closer to a tutorial than production
 source. Every C++ construct gets a "what this is / why it's here" note, often with
 a C# comparison. If you're coming from a managed language and finding your footing in C++ or
-audio programming, I hope this is useful — there aren't nearly enough audio
-programming resources out there and maybe this fills a tiny gap.
+audio programming, I hope this is useful. There aren't nearly enough audio
+programming resources out there, and maybe this fills a tiny gap.
 
 **Use it for whatever you like.** Fork it, strip it down, build on top of it, use it to learn - whatever. And if you spot something wrong or have a better
 way to do it, I'd love to hear it: see [Contributing](#contributing).
@@ -137,24 +137,24 @@ The code stays light on comments; the reasoning lives in
 **[`documentation/`](documentation/README.md)**. Each doc opens with an "In short" summary, then
 goes deep.
 
-| Doc | What's in it |
-|---|---|
-| **The plugin** | |
-| [The plan](documentation/plan.md) | The phased build, start to finish |
-| [Hosting & threads](documentation/plugin-hosting-and-threads.md) | Why the DAW owns `main()`, the audio thread's deadline, samples vs blocks |
-| [Parameters & automation](documentation/parameters-and-automation.md) | APVTS, dB vs linear gain, skew, thread-safe parameter reads |
-| [Smoothing & the audio loop](documentation/smoothing-and-the-audio-loop.md) | Zipper noise and `SmoothedValue`, loop order, raw pointers, denormals |
-| [State: save and restore](documentation/state-save-and-restore.md) | What a host stores, `ValueTree` → XML → bytes, loading untrusted data safely |
-| [Identity & macOS](documentation/plugin-identity-and-macos.md) | Bundle IDs, 4-character codes, `auval`, privacy permissions |
-| [The editor (GUI)](documentation/editor-gui.md) | Components, the two-way `SliderAttachment`, member order, layout, testing a GUI with no screen |
-| **C++ foundations** | |
-| [Memory model](documentation/cpp-memory-model.md) | Stack vs heap, references vs pointers, RAII vs garbage collection |
-| [Build pipeline](documentation/cpp-build-pipeline.md) | Headers, preprocessor, compiling and linking, vs Roslyn and the CLR |
-| [CMake walkthrough](documentation/cmake-walkthrough.md) | `CMakeLists.txt` line by line, and why Debug builds matter for audio |
-| **Workflow** | |
-| [Dev tooling](documentation/dev-workflow-and-tooling.md) | CLion, CMake generators, Ninja, git submodules |
-| [Testing](documentation/testing.md) | The automated tests, and how to hear it standalone and in a DAW |
-| [CI & GitHub Actions](documentation/ci-and-github-actions.md) | What the pipeline does, and why the default template didn't work |
+| Doc                                                                         | What's in it                                                                                   |
+|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| **The plugin**                                                              |                                                                                                |
+| [The plan](documentation/plan.md)                                           | The phased build, start to finish                                                              |
+| [Hosting & threads](documentation/plugin-hosting-and-threads.md)            | Why the DAW owns `main()`, the audio thread's deadline, samples vs blocks                      |
+| [Parameters & automation](documentation/parameters-and-automation.md)       | APVTS, dB vs linear gain, skew, thread-safe parameter reads                                    |
+| [Smoothing & the audio loop](documentation/smoothing-and-the-audio-loop.md) | Zipper noise and `SmoothedValue`, loop order, raw pointers, denormals                          |
+| [State: save and restore](documentation/state-save-and-restore.md)          | What a host stores, `ValueTree` → XML → bytes, loading untrusted data safely                   |
+| [Identity & macOS](documentation/plugin-identity-and-macos.md)              | Bundle IDs, 4-character codes, `auval`, privacy permissions                                    |
+| [The editor (GUI)](documentation/editor-gui.md)                             | Components, the two-way `SliderAttachment`, member order, layout, testing a GUI with no screen |
+| **C++ foundations**                                                         |                                                                                                |
+| [Memory model](documentation/cpp-memory-model.md)                           | Stack vs heap, references vs pointers, RAII vs garbage collection                              |
+| [Build pipeline](documentation/cpp-build-pipeline.md)                       | Headers, preprocessor, compiling and linking, vs Roslyn and the CLR                            |
+| [CMake walkthrough](documentation/cmake-walkthrough.md)                     | `CMakeLists.txt` line by line, and why Debug builds matter for audio                           |
+| **Workflow**                                                                |                                                                                                |
+| [Dev tooling](documentation/dev-workflow-and-tooling.md)                    | CLion, CMake generators, Ninja, git submodules                                                 |
+| [Testing](documentation/testing.md)                                         | The automated tests, and how to hear it standalone and in a DAW                                |
+| [CI & GitHub Actions](documentation/ci-and-github-actions.md)               | What the pipeline does, and why the default template didn't work                               |
 
 If you have any suggestions or feedback, see [Contributing](#contributing).
 

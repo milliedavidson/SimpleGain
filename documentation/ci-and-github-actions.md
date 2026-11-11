@@ -41,8 +41,8 @@ steps:
   - run: make distcheck
 ```
 
-That's **GNU Autotools** — the build system most C/C++ projects used before CMake became
-standard: a `./configure` script (generated ahead of time by `autoconf`, checked into the repo)
+That's **GNU Autotools**, the build system most C/C++ projects used before CMake became
+standard. A `./configure` script (generated ahead of time by `autoconf`, checked into the repo)
 inspects the local machine and writes out a `Makefile`, which `make` then reads.
 
 SimpleGain has neither `configure` nor `Makefile.am` — it's CMake. So the very first step fails
@@ -106,9 +106,9 @@ Three details worth calling out:
 
 - **`submodules: recursive`** — without it, `actions/checkout` leaves `libs/JUCE` empty, exactly
   the trap covered in [Dev tooling §1](dev-workflow-and-tooling.md#1-what-does-shallow-mean-in-a-git-clone).
-  A fresh CI runner has nothing but what the checkout step
-  gives it, so a forgotten flag here isn't a warning, it's a hard failure — unlike locally,
-  where a stale `libs/JUCE` from an earlier clone can quietly mask the mistake.
+  A fresh CI runner has nothing but what the checkout step gives it. So a forgotten flag here isn't a
+  warning, it's a hard failure. Locally, a stale `libs/JUCE` from an earlier clone can quietly mask
+  the mistake.
 - **`auval -v aufx Sgai Mxdp`** as the final step — the exact same command run locally to
   validate the plugin (see [Plugin identity & macOS §2](plugin-identity-and-macos.md#2-where-do-i-find-auval)), so CI is genuinely
   checking "would Logic actually load this," not just "does it compile."
@@ -138,28 +138,28 @@ Three details worth calling out:
 
 ## 3. What a pipeline actually does
 
-The honest one-line answer: it isn't simulating a build — it's a **real execution of the real
-build**, on a real (virtual) machine, running the exact same tools as a local Terminal — same
+The honest one-line answer: it isn't simulating a build. It's a **real execution of the real
+build**, on a real (virtual) machine, running the exact same tools as a local Terminal: same
 `cmake`, same `clang`, same `auval`. Nothing is emulated. GitHub-hosted runners are literally
 Azure VMs (GitHub is owned by Microsoft) that get created, used once, and thrown away.
 
-What makes that actually useful isn't "different hardware" — the architecture difference is
-just a property of *which runner label was chosen*, not something CI inherently requires (see
-§2 above — `macos-15-intel` would give an x86_64 runner matching the machine this was developed
-on). The real value is three things a local Terminal can't give you:
+What makes that actually useful isn't "different hardware". The architecture difference is
+just a property of *which runner label was chosen*, not something CI inherently requires.
+(See §2 above: `macos-15-intel` would give an x86_64 runner matching the machine this was developed
+on.) The real value is three things a local Terminal can't give you:
 
-1. **A blank slate, every time.** Every run starts from an empty machine — nothing left over
+1. **A blank slate, every time.** Every run starts from an empty machine: nothing left over
    from a previous run, no stray environment variable, nothing installed that isn't explicitly
-   in the workflow. This is what makes the `submodules: recursive` flag matter so much: a local
-   machine might still have JUCE sitting around from an earlier, correct clone even after a
-   mistake; a fresh runner has genuinely nothing until the workflow fetches it. It's the
-   automated version of asking "does this actually work from scratch, or does it only work
-   because of some state that's accumulated on my machine and nowhere else?"
+   in the workflow. This is what makes the `submodules: recursive` flag matter so much. A local
+   machine might still have JUCE sitting around from an earlier, correct clone, even after a
+   mistake. A fresh runner has genuinely nothing until the workflow fetches it. It's the
+   automated version of asking: does this work from scratch, or only because of state that has
+   accumulated on my machine?
 2. **Runs without anyone remembering to.** Fires automatically on every push and every pull
-   request — including PRs from someone else. Given the README's "open to PRs" invitation, this
-   is the part that matters most in practice: a contributor's build gets checked before their
-   diff is ever opened, with no need to pull their branch down and build it by hand first just
-   to find out if it even compiles.
+   request, including PRs from someone else. Given the README's "open to PRs" invitation, this
+   is the part that matters most in practice. A contributor's build gets checked before their
+   diff is ever opened, so you don't have to pull their branch and build it by hand just to find
+   out if it compiles.
 3. **A visible, permanent record.** Pass or fail becomes a green check or red ✕ attached to that
    exact commit, forever — not "I tested this, trust me," a receipt anyone can go back and look
    at.

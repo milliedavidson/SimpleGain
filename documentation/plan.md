@@ -41,16 +41,16 @@ PLUGIN_CODE              Sgai
 
 **Verified environment:**
 
-| Thing | Status |
-| --- | --- |
-| CLion | `/Applications/CLion.app` ✓ |
-| CMake | 3.31.3 (JUCE 8 needs ≥ 3.22) ✓ |
-| Compiler | Apple clang 17.0.0 ✓ |
-| macOS / SDK | macOS 26.6.2, CLT SDK 15.5 ✓ |
-| `auval` | `/usr/bin/auval` ✓ |
+| Thing         | Status                                                             |
+|---------------|--------------------------------------------------------------------|
+| CLion         | `/Applications/CLion.app` ✓                                        |
+| CMake         | 3.31.3 (JUCE 8 needs ≥ 3.22) ✓                                     |
+| Compiler      | Apple clang 17.0.0 ✓                                               |
+| macOS / SDK   | macOS 26.6.2, CLT SDK 15.5 ✓                                       |
+| `auval`       | `/usr/bin/auval` ✓                                                 |
 | AU frameworks | AudioUnit, AudioToolbox, CoreAudioKit, Accelerate all in CLT SDK ✓ |
-| Architecture | Intel x86_64 (Core i9-9880H) |
-| Disk free | 60 GB ✓ |
+| Architecture  | Intel x86_64 (Core i9-9880H)                                       |
+| Disk free     | 60 GB ✓                                                            |
 
 **Known risk:** there is no full `Xcode.app` — only Command Line Tools. The AU build is
 *expected* to work (all required frameworks confirmed present above), but if the AU target
@@ -136,9 +136,9 @@ We include module headers directly (`#include <juce_audio_processors/juce_audio_
 This is current JUCE best practice, compiles faster, and makes dependencies explicit — closer
 in spirit to C#'s explicit `using` directives than a catch-all header.
 
-**C++ vs C# concepts introduced:** CMake as the `.csproj`/`.sln` equivalent but *generating* a
-build rather than being one; there is no NuGet — dependencies are source you compile yourself;
-the compile → link → binary pipeline; what "linking a library" means.
+**C++ vs C# concepts introduced:** CMake as the `.csproj`/`.sln` equivalent, but *generating* a
+build rather than being one. There is no NuGet: dependencies are source you compile yourself.
+Also the compile → link → binary pipeline, and what "linking a library" means.
 → *background: [§4 Compile/link](cpp-build-pipeline.md#4-the-compile--link--binary-pipeline), [§2 Preprocessor](cpp-build-pipeline.md#2-what-is-the-preprocessor), [§1 Headers](cpp-build-pipeline.md#1-the-juce-headers--is-it-like-using-directives-in-c)*
 
 ### Phase 1 - Deep dive
@@ -155,11 +155,11 @@ target_compile_definitions — these become #defines. The C++ preprocessor is a 
 
 target_link_libraries — linking is the step that stitches separately-compiled pieces into one binary. C# has no equivalent because the CLR resolves assembly references at runtime; C++ resolves them at build time, into a single file.
 
-One thing I caught while checking the docs rather than trusting memory: PLUGIN_CODE must contain exactly one uppercase letter, and GarageBand additionally wants the first letter uppercase and the rest lowercase. Violate it and the plugin builds fine but GarageBand silently ignores it — a genuinely nasty half-day bug. Hence Sgai, not my originally planned Sgn1.
+One thing I caught while checking the docs rather than trusting memory: PLUGIN_CODE must contain exactly one uppercase letter, and GarageBand additionally wants the first letter uppercase and the rest lowercase. Violate it and the plugin builds fine but GarageBand silently ignores it — a genuinely nasty half-day bug. Hence, Sgai, not my originally planned Sgn1.
 
-"Blocking" is the one I'd most encourage you to read properly, because it's the opposite of what most people assume: it isn't your thread being interrupted, it's your code voluntarily going to sleep waiting for something. Nobody stopped you — you stopped yourself. And you can't bound how long it lasts, which is why a mutex.lock() that usually takes nanoseconds can occasionally blow a 10.7 ms budget wide open.
+"Blocking" is the one I'd most encourage you to read properly, because it's the opposite of what most people assume. It isn't your thread being interrupted, it's your code voluntarily going to sleep waiting for something. Nobody stopped you — you stopped yourself. And you can't bound how long it lasts, which is why a mutex.lock() that usually takes nanoseconds can occasionally blow a 10.7 ms budget wide open.
 
-"Would you just keep the threads apart as standard?" — you'd want to, but the trap is that the natural C#-brained way looks fine and works in testing. A plain float shared between the slider and processBlock is a formal data race: the compiler may cache it in a register and your slider silently stops working in Release builds only. [§4 in plugin-hosting-and-threads.md](plugin-hosting-and-threads.md#4-keeping-the-two-threads-apart--wouldnt-you-just-do-that-anyway) has a table of the accidental ones — adding a debug log line to processBlock is the classic, because the log line causes the glitch you're debugging.
+"Would you just keep the threads apart as standard?" — you'd want to, but the trap is that the natural C#-brained way looks fine and works in testing. A plain float shared between the slider and processBlock is a formal data race. The compiler may cache it in a register, and your slider silently stops working in Release builds only. [§4 in plugin-hosting-and-threads.md](plugin-hosting-and-threads.md#4-keeping-the-two-threads-apart--wouldnt-you-just-do-that-anyway) has a table of the accidental ones. Adding a debug log line to processBlock is the classic, because the log line causes the glitch you're debugging.
 
 ## Phase 2 — The processor skeleton (silent pass-through)
 
@@ -199,10 +199,10 @@ Standalone target** to prove the toolchain end to end.
 - **`const` and `const&`** for parameters — no real C# equivalent; it's a compiler-enforced
   promise.
 
-- **RAII and destructors** — deterministic cleanup, the reason C++ doesn't need a GC.
+- **RAII and destructors** — deterministic clean-up, the reason C++ doesn't need a GC.
   Closest C# analogy: `IDisposable`/`using`, but automatic and impossible to forget.
 
-- **Member initializer lists** (`: memberA (x), memberB (y)`) vs C# field initialisers.
+- **Member initialiser lists** (`: memberA (x), memberB (y)`) vs C# field initialisers.
 
 - **`auto`** ≈ `var`.
 
@@ -248,7 +248,7 @@ C# has nothing equivalent — it's a compiler-enforced promise, not a convention
 
 RAII and destructors — ~SimpleGainAudioProcessor() runs automatically and deterministically the moment the object dies. This is why C++ doesn't need a GC. The nearest C# concept is IDisposable + using, except automatic and impossible to forget.
 
-Member initializer lists — the bit between : and {:
+Member initialiser lists — the bit between : and {:
 
 ```
 SimpleGainAudioProcessorEditor::SimpleGainAudioProcessorEditor (SimpleGainAudioProcessor& p)
@@ -262,7 +262,7 @@ Right now it's a pass-through: audio in, identical audio out. That's the point �
 
 ### Phase 2 - Configuration
 
-COMPANY_NAME is the one customers actually see — it's the "Manufacturer" column in every DAW's plugin browser. The 4-character codes (Mxdp, Sgai) are mostly invisible, but they're the plugin's permanent identity — change them before you ever share a build, because changing them later makes DAWs treat it as a different plugin and existing projects lose their settings.
+COMPANY_NAME is the one customers actually see — it's the "Manufacturer" column in every DAW's plugin browser. The 4-character codes (Mxdp, Sgai) are mostly invisible, but they're the plugin's permanent identity. Change them before you ever share a build. Changing them later makes DAWs treat it as a different plugin, and existing projects lose their settings.
 
 CLion generates run configurations automatically once CMake finishes loading. Your list was empty because it hadn't configured yet. Do Tools → CMake → Reset Cache and Reload Project, wait ~90 seconds for [Finished], and the dropdown will populate itself with SimpleGain_Standalone and friends.
 
@@ -291,8 +291,8 @@ value simultaneously host-automatable, savable, and bindable to a GUI control.
   - a `NormalisableRange` with a skew factor so the useful range around 0 dB gets more
     fader travel (matching how hearing works)
   - a string-formatting lambda so the host displays `"-6.0 dB"` not `"-6.000000"`
-  - createParameterLayout() — a static factory. It has to be static because we call it in the initializer list to build apvts, at which point the object is still half-constructed.
-- The APVTS member, constructed in the initializer list
+  - createParameterLayout() — a static factory. It has to be static because we call it in the initialiser list to build apvts, at which point the object is still half-constructed.
+- The APVTS member, constructed in the initialiser list
 - A cached `std::atomic<float>* gainParameter` — grabbed once in the constructor so
   `processBlock` never does a string lookup
 - Apply the gain in `processBlock` (naively for now — we'll fix the artefacts in Phase 4)
@@ -414,9 +414,9 @@ Replace `GenericAudioProcessorEditor` with a hand-built editor.
 - `resized()` for layout, using `juce::Rectangle::removeFromTop` etc. — JUCE's layout idiom
 - `setSize()`, and making the window resizable with sensible constraints
 
-**C++ vs C# concepts introduced:** member declaration order matters (destruction is reverse of
-construction — the attachment must be declared *after* the slider or it dangles); why the
-editor holds a reference to the processor rather than owning it; the message thread again.
+**C++ vs C# concepts introduced:** member declaration order matters. Destruction is the reverse of
+construction, so the attachment must be declared *after* the slider or it dangles. Also why the
+editor holds a reference to the processor rather than owning it, and the message thread again.
 
 **Verification:** knob turns, audio responds, value box is editable, window resizes cleanly.
 
@@ -482,14 +482,14 @@ a blocker.
 
 ## Verification summary
 
-| Phase | How we know it worked |
-|---|---|
-| 1 | CLion configures; `SimpleGain_Standalone`, `_AU`, `_VST3` targets appear |
-| 2 | Standalone launches; audio passes through unmodified |
-| 3 | Generated slider audibly changes volume |
-| 4 | Fast fader sweeps produce no clicks |
-| 5 | Gain value survives quit and relaunch |
-| 6 | Custom knob works; window resizes |
-| 7 | `auval -v aufx Sgai Mxdp` passes; plugin loads and automates in a real DAW |)
+| Phase | How we know it worked                                                      |
+|-------|----------------------------------------------------------------------------|
+| 1     | CLion configures; `SimpleGain_Standalone`, `_AU`, `_VST3` targets appear   |
+| 2     | Standalone launches; audio passes through unmodified                       |
+| 3     | Generated slider audibly changes volume                                    |
+| 4     | Fast fader sweeps produce no clicks                                        |
+| 5     | Gain value survives quit and relaunch                                      |
+| 6     | Custom knob works; window resizes                                          |
+| 7     | `auval -v aufx Sgai Mxdp` passes; plugin loads and automates in a real DAW |
 
 ---

@@ -34,13 +34,13 @@ Everything below in five bullets, for when you just need reminding:
 `juce::AudioProcessorValueTreeState` is a single member that replaces three separate pieces of
 plumbing you'd otherwise write by hand:
 
-| Job | What it means | Without APVTS you'd write |
-|---|---|---|
-| **Host automation** | Logic can record and play back fader moves | Manual `AudioProcessorParameter` subclasses and index bookkeeping |
-| **State save/load** | Settings survive closing and reopening a project | Your own serialisation in `get/setStateInformation` |
-| **GUI binding** | A slider and the parameter stay in sync, both ways | Listener callbacks in both directions, plus feedback-loop guards |
+| Job                 | What it means                                      | Without APVTS you'd write                                         |
+|---------------------|----------------------------------------------------|-------------------------------------------------------------------|
+| **Host automation** | Logic can record and play back fader moves         | Manual `AudioProcessorParameter` subclasses and index bookkeeping |
+| **State save/load** | Settings survive closing and reopening a project   | Your own serialisation in `get/setStateInformation`               |
+| **GUI binding**     | A slider and the parameter stay in sync, both ways | Listener callbacks in both directions, plus feedback-loop guards  |
 
-Constructed in the member initializer list:
+Constructed in the member initialiser list:
 
 ```cpp
 apvts (*this, nullptr, "PARAMETERS", createParameterLayout())
@@ -97,13 +97,13 @@ Because **dB is already a logarithmic scale.** That's the entire point of it.
 A decibel is *defined* as `20 × log₁₀(ratio)`. So equal steps in dB already correspond to equal
 *perceived* changes in loudness:
 
-| dB change | Multiplier | Sounds like |
-|---|---|---|
-| −6 dB | ×0.50 | one step quieter |
-| 0 dB | ×1.00 | unchanged |
-| +6 dB | ×2.00 | one step louder |
-| +12 dB | ×4.00 | two steps louder |
-| +30 dB | ×31.6 | our maximum boost |
+| dB change | Multiplier | Sounds like       |
+|-----------|------------|-------------------|
+| −6 dB     | ×0.50      | one step quieter  |
+| 0 dB      | ×1.00      | unchanged         |
+| +6 dB     | ×2.00      | one step louder   |
+| +12 dB    | ×4.00      | two steps louder  |
+| +30 dB    | ×31.6      | our maximum boost |
 
 Going −6 → 0 and 0 → +6 feel like the same size of change, even though one adds 0.5 to the
 multiplier and the other adds 1.0. The log has already been applied — by choosing dB as the
@@ -118,14 +118,14 @@ the problem skew is meant to solve.
 > **Skew compensates for a parameter whose units are linear but whose perception is
 > logarithmic. If the unit is already logarithmic, skip it.**
 
-| Parameter | Unit | Perception | Skew? |
-|---|---|---|---|
-| Filter cutoff | Hz — linear | logarithmic | **Yes** |
-| Raw gain multiplier | 0.0–2.0 — linear | logarithmic | **Yes** |
-| Gain in dB | dB — already log | logarithmic | **No** |
-| Pitch in semitones | already log | logarithmic | **No** |
-| Pan | −1 to +1 — linear | linear | **No** |
-| Dry/wet mix | 0–100% — linear | roughly linear | **No** |
+| Parameter           | Unit              | Perception     | Skew?   |
+|---------------------|-------------------|----------------|---------|
+| Filter cutoff       | Hz — linear       | logarithmic    | **Yes** |
+| Raw gain multiplier | 0.0–2.0 — linear  | logarithmic    | **Yes** |
+| Gain in dB          | dB — already log  | logarithmic    | **No**  |
+| Pitch in semitones  | already log       | logarithmic    | **No**  |
+| Pan                 | −1 to +1 — linear | linear         | **No**  |
+| Dry/wet mix         | 0–100% — linear   | roughly linear | **No**  |
 
 In JUCE, skew is set on the `NormalisableRange` — either directly via its skew argument, or
 more readably with `range.setSkewForCentre (630.0f)`, which means "make this value land at the
@@ -145,12 +145,12 @@ headroom — you regularly need to push a quiet source much harder than that.
 
 The current range is **−60 dB to +30 dB**, matching Logic's own Gain plugin. For reference:
 
-| Plugin | Range |
-|---|---|
-| Logic Gain | ±30 dB |
-| Ableton Utility | −∞ to +35 dB |
-| Typical "trim" utility | ±24 dB |
-| **SimpleGain** | **−60 to +30 dB** |
+| Plugin                 | Range             |
+|------------------------|-------------------|
+| Logic Gain             | ±30 dB            |
+| Ableton Utility        | −∞ to +35 dB      |
+| Typical "trim" utility | ±24 dB            |
+| **SimpleGain**         | **−60 to +30 dB** |
 
 +30 dB is a multiplier of **31.6×**, which is a lot — enough to rescue a quietly-recorded take
 or a low-output ribbon mic.
@@ -159,8 +159,8 @@ or a low-output ribbon mic.
 
 Where 0 dB sits on the fader is a function of the range:
 
-| Range | Span | 0 dB sits at |
-|---|---|---|
+| Range     | Span  | 0 dB sits at      |
+|-----------|-------|-------------------|
 | −60 … +12 | 72 dB | **83%** of travel |
 | −60 … +30 | 90 dB | **67%** of travel |
 
@@ -178,10 +178,10 @@ trim/gain utility and it's the user's job to watch their meters.
 Changing a parameter's range after people have saved projects is a genuine
 backward-compatibility problem, and the two halves of "saved state" behave differently:
 
-| What | Stores | Effect of widening the range |
-|---|---|---|
-| **The plugin's own state** (`getStateInformation`) | the **real dB value** — verified in JUCE's `juce_AudioProcessorValueTreeState.cpp`, which does `tree.setProperty (key, unnormalisedValue.load(), um)` | **Safe.** `-6.0` reloads as `-6.0` |
-| **Host automation lanes** (AU/VST3) | a **normalised 0–1 value** | **Shifts.** 0.5 meant −24 dB on the old range; it means −15 dB on the new one |
+| What                                               | Stores                                                                                                                                                | Effect of widening the range                                                  |
+|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| **The plugin's own state** (`getStateInformation`) | the **real dB value** — verified in JUCE's `juce_AudioProcessorValueTreeState.cpp`, which does `tree.setProperty (key, unnormalisedValue.load(), um)` | **Safe.** `-6.0` reloads as `-6.0`                                            |
+| **Host automation lanes** (AU/VST3)                | a **normalised 0–1 value**                                                                                                                            | **Shifts.** 0.5 meant −24 dB on the old range; it means −15 dB on the new one |
 
 So a saved fader position survives, but any recorded automation would move. Changing it now,
 before release and before anyone has automation recorded, costs nothing. Doing it after would
@@ -267,11 +267,11 @@ That's the **capture list**, and it's the biggest lambda difference from C#.
 C# closures capture variables implicitly — you just use an outer variable and the compiler and
 GC sort it out. C++ makes you state what you're capturing, because **lifetimes are manual**:
 
-| Capture | Meaning |
-|---|---|
-| `[]` | capture nothing |
-| `[x]` | capture `x` **by copy** |
-| `[&x]` | capture `x` **by reference** |
+| Capture       | Meaning                                   |
+|---------------|-------------------------------------------|
+| `[]`          | capture nothing                           |
+| `[x]`         | capture `x` **by copy**                   |
+| `[&x]`        | capture `x` **by reference**              |
 | `[=]` / `[&]` | capture everything by copy / by reference |
 
 Empty `[]` is not laziness here, it's correct and important. This lambda is **stored inside the
@@ -308,12 +308,12 @@ waveform selector, so ramping there would be meaningless.
 
 The other flags in that line:
 
-| Flag | Meaning |
-|---|---|
-| `Values Have Strings` | the plugin supplies display text (our lambda, §5) |
-| `High Resolution` | the value is a float, not a coarse stepped integer |
-| `Can Ramp` | safe to change smoothly / automate continuously |
-| `Readable` / `Writable` | the host may both query and set it |
+| Flag                    | Meaning                                            |
+|-------------------------|----------------------------------------------------|
+| `Values Have Strings`   | the plugin supplies display text (our lambda, §5)  |
+| `High Resolution`       | the value is a float, not a coarse stepped integer |
+| `Can Ramp`              | safe to change smoothly / automate continuously    |
+| `Readable` / `Writable` | the host may both query and set it                 |
 
 ### The irony — and how Phase 4 resolved it
 

@@ -35,12 +35,12 @@ exist — gain is something you apply *to a track, inside a mix*, which means in
 The Standalone build isn't a deliverable, it's a **development tool**. Its value is the
 iteration loop:
 
-| | Standalone | DAW |
-|---|---|---|
-| Build → hear it | ~5 seconds | rebuild, rescan plugins, reopen session |
-| Stale copy held in memory | no | yes — DAWs cache plugins and need restarting |
-| Crashes take down | just your app | your whole DAW session |
-| Debugger attach | trivial | awkward |
+|                           | Standalone    | DAW                                          |
+|---------------------------|---------------|----------------------------------------------|
+| Build → hear it           | ~5 seconds    | rebuild, rescan plugins, reopen session      |
+| Stale copy held in memory | no            | yes — DAWs cache plugins and need restarting |
+| Crashes take down         | just your app | your whole DAW session                       |
+| Debugger attach           | trivial       | awkward                                      |
 
 So it exists to answer "does this build and run at all" fast, which is exactly what it did in
 Phase 2. It is *not* the right tool for evaluating how something sounds.
@@ -108,15 +108,15 @@ it on every push.
 
 ### What's covered
 
-34 tests in five groups, about 1,460 individual checks:
+35 tests in five groups, about 1,460 individual checks:
 
-| File | Group | What it protects |
-|---|---|---|
-| `GainSmoothingTests.cpp` | Gain smoothing | The glide: no big steps, about 20 ms at any sample rate or block size, both channels identical, no fade-in at the start. See [Smoothing & the audio loop](smoothing-and-the-audio-loop.md). |
-| `ParameterTests.cpp` | Parameters | The permanent things: the `"gain"` id and its version hint, the −60…+30 dB range, the default, the display text, the accepted channel layouts. |
-| `StateTests.cpp` | State save and restore | The round trip, applying from the first sample, loading during playback, wrong or unexpected documents, the saved format. See [State: save and restore](state-save-and-restore.md). |
-| `CorruptStateTests.cpp` | Corrupt state data | Empty, random, truncated and corrupted data fed to the loader: it must never crash. Its own group so it can be run alone, for example under a memory checker. |
-| `EditorTests.cpp` | Editor | The GUI, with no screen: the knob follows the parameter *and* the parameter follows the knob, layout at every window size, it really draws, opening and closing 50 times. See [The editor (GUI) §10](editor-gui.md#10-testing-a-gui-with-no-screen). |
+| File                     | Group                  | What it protects                                                                                                                                                                                                                                                   |
+|--------------------------|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `GainSmoothingTests.cpp` | Gain smoothing         | The glide: no big steps, about 20 ms at any sample rate or block size, both channels identical, no fade-in at the start. See [Smoothing & the audio loop](smoothing-and-the-audio-loop.md).                                                                        |
+| `ParameterTests.cpp`     | Parameters             | The permanent things: the `"gain"` id and its version hint, the −60…+30 dB range, the default, the display text, the accepted channel layouts.                                                                                                                     |
+| `StateTests.cpp`         | State save and restore | The round trip, applying from the first sample, loading during playback, wrong or unexpected documents, the saved format. See [State: save and restore](state-save-and-restore.md).                                                                                |
+| `CorruptStateTests.cpp`  | Corrupt state data     | Empty, random, truncated and corrupted data fed to the loader: it must never crash. Its own group so it can be run alone, for example under a memory checker.                                                                                                      |
+| `EditorTests.cpp`        | Editor                 | The GUI, with no screen: the knob follows the parameter *and* the parameter follows the knob, layout and text size at every window size, it really draws, opening and closing 50 times. See [The editor (GUI) §11](editor-gui.md#11-testing-a-gui-with-no-screen). |
 
 **If a test in `ParameterTests` or the format tests in `StateTests` fails, a permanent thing has
 changed** — an id, a range, the saved format. Stop and think before "fixing" the test: it's
@@ -125,17 +125,17 @@ there to stop exactly that.
 ### How they were written
 
 **Test-first.** The Phase 5 tests were written before the implementation and run against the
-empty stubs: 60 checks passed and 10 failed, every failure in the state tests, with messages like
-*"gain −12.3 dB: expected −12.3, actual 0"*. Then the two functions were written and the tests
-went green. Writing them first is what proves a test can fail.
+empty stubs. In that first run, 60 checks passed and 10 failed, every failure in the state tests,
+with messages like *"gain −12.3 dB: expected −12.3, actual 0"*. Then the two functions were written
+and the tests went green. Writing them first is what proves a test can fail.
 
 **Deterministic.** The corrupt-data tests use fixed random seeds, so every run, and CI, corrupts
 the same bytes the same way. A failure is reproducible, not a one-in-a-hundred flake.
 
-**They found things.** The hostile-input tests exposed one wrong assumption of mine (what happens
-to a parameter missing from the saved state), one real looseness in the plugin (a document whose
-tag differed only by case was accepted in a Release build), and three families of JUCE's own debug
-assertions. The story is in
+**They found things.** The hostile-input tests exposed one wrong assumption of mine: what happens
+to a parameter missing from the saved state. They also exposed one real looseness in the plugin:
+a document whose tag differed only by case was accepted in a Release build. And they exposed three
+families of JUCE's own debug assertions. The story is in
 [State: save and restore §6](state-save-and-restore.md#6-loading-never-trust-the-bytes).
 
 ### How I know they can fail
@@ -143,48 +143,60 @@ assertions. The story is in
 A test that can't fail is worthless, and a test that merely passes proves little. So I built
 deliberately broken copies of the plugin and ran these same tests against each one:
 
-| Broken on purpose | What I changed | Result | Caught by |
-|---|---|---|---|
-| per-block gain (the Phase 3 bug) | apply one gain per block again, no smoothing | **caught** | Gain smoothing ×3, State save and restore ×1 |
-| loops the wrong way round | channels outer, samples inner, one shared smoother | **caught** | Gain smoothing ×4, State save and restore ×1 |
-| smoother not started at the fader | drop setCurrentAndTargetValue in prepareToPlay | **caught** | Gain smoothing ×2, State save and restore ×1 |
-| 5 ms glide instead of 20 ms | gainRampSeconds = 0.005 | **caught** | Gain smoothing ×2, State save and restore ×1 |
-| steady gain forced to unity | steady-state branch applies 1.0 instead of the gain | **caught** | Gain smoothing ×4, State save and restore ×2 |
-| range narrowed to +12 dB | max gain back to +12 | **caught** | Gain smoothing ×1, Parameters ×3, State save and restore ×3 |
-| skew added to the range | NormalisableRange with a skew factor | **caught** | Parameters ×1 |
-| default gain changed to +3 dB | default 0 -> 3 | **caught** | Gain smoothing ×1, Parameters ×1, State save and restore ×3 |
-| parameter id renamed | "gain" -> "level" everywhere | **caught** | the test app crashed |
-| parameter version hint bumped | ParameterID version 1 -> 2 | **caught** | Parameters ×1 |
-| display text loses its unit | "-6.0 dB" -> "-6.0" | **caught** | Parameters ×1 |
-| any channel layout accepted | isBusesLayoutSupported returns true for mismatched in/out | **caught** | Parameters ×1 |
-| state functions are empty again | back to the Phase 4 stubs | **caught** | State save and restore ×7, Corrupt state data ×1 |
-| no check that the document is ours | tag guard removed | **caught** | State save and restore ×2 |
-| tag compared case-insensitively | hasTagName instead of an exact compare | **caught** | State save and restore ×1 |
-| unreadable data not checked for | dereference without the null check | **caught** | the test app crashed (after 2 failing) |
-| saves without flushing (state.createXml) | skip copyState(), read the tree directly | **caught** | State save and restore ×4 |
-| attachment declared before the slider | swap two member lines in the editor | **caught** | the test app crashed |
-| no attachment | knob and parameter not connected | **caught** | Editor ×6 |
-| generic editor again | createEditor returns JUCE's GenericAudioProcessorEditor | **caught** | Editor ×1 |
-| no resize limits | setResizeLimits removed | **caught** | Editor ×1 |
-| no fixed aspect ratio | setFixedAspectRatio removed | **caught** | Editor ×1 |
-| knob bigger than the window | knob bounds expanded | **caught** | Editor ×2 |
-| knob far too small | knob bounds shrunk | **caught** | Editor ×1 |
-| flat background | no gradient | **caught** | Editor ×1 |
-| knob added but hidden | addChildComponent instead of addAndMakeVisible | **caught** | Editor ×1 |
-| knob loses its ID | no setComponentID | **caught** | Editor ×8 |
-| denormal guard removed | no ScopedNoDenormals | survived | — |
-| unused output channels not cleared | drop the clear() loop | survived | — |
+| Broken on purpose                        | What I changed                                            | Result     | Caught by                                                   |
+|------------------------------------------|-----------------------------------------------------------|------------|-------------------------------------------------------------|
+| per-block gain (the Phase 3 bug)         | apply one gain per block again, no smoothing              | **caught** | Gain smoothing ×3, State save and restore ×1                |
+| loops the wrong way round                | channels outer, samples inner, one shared smoother        | **caught** | Gain smoothing ×4, State save and restore ×1                |
+| smoother not started at the fader        | drop setCurrentAndTargetValue in prepareToPlay            | **caught** | Gain smoothing ×2, State save and restore ×1                |
+| 5 ms glide instead of 20 ms              | gainRampSeconds = 0.005                                   | **caught** | Gain smoothing ×2, State save and restore ×1                |
+| steady gain forced to unity              | steady-state branch applies 1.0 instead of the gain       | **caught** | Gain smoothing ×4, State save and restore ×2                |
+| range narrowed to +12 dB                 | max gain back to +12                                      | **caught** | Gain smoothing ×1, Parameters ×3, State save and restore ×3 |
+| skew added to the range                  | NormalisableRange with a skew factor                      | **caught** | Parameters ×1                                               |
+| default gain changed to +3 dB            | default 0 -> 3                                            | **caught** | Gain smoothing ×1, Parameters ×1, State save and restore ×3 |
+| parameter id renamed                     | "gain" -> "level" everywhere                              | **caught** | the test app crashed                                        |
+| parameter version hint bumped            | ParameterID version 1 -> 2                                | **caught** | Parameters ×1                                               |
+| display text loses its unit              | "-6.0 dB" -> "-6.0"                                       | **caught** | Parameters ×1                                               |
+| any channel layout accepted              | isBusesLayoutSupported returns true for mismatched in/out | **caught** | Parameters ×1                                               |
+| state functions are empty again          | back to the Phase 4 stubs                                 | **caught** | State save and restore ×7, Corrupt state data ×1            |
+| no check that the document is ours       | tag guard removed                                         | **caught** | State save and restore ×2                                   |
+| tag compared case-insensitively          | hasTagName instead of an exact compare                    | **caught** | State save and restore ×1                                   |
+| unreadable data not checked for          | dereference without the null check                        | **caught** | the test app crashed (after 2 failing)                      |
+| saves without flushing (state.createXml) | skip copyState(), read the tree directly                  | **caught** | State save and restore ×4                                   |
+| attachment declared before the slider    | swap two member lines in the editor                       | **caught** | the test app crashed                                        |
+| no attachment                            | knob and parameter not connected                          | **caught** | Editor ×6                                                   |
+| generic editor again                     | createEditor returns JUCE's GenericAudioProcessorEditor   | **caught** | Editor ×1                                                   |
+| no resize limits                         | setResizeLimits removed                                   | **caught** | Editor ×1                                                   |
+| no fixed aspect ratio                    | setFixedAspectRatio removed                               | **caught** | Editor ×1                                                   |
+| knob bigger than the window              | knob bounds expanded                                      | **caught** | Editor ×2                                                   |
+| knob far too small                       | knob bounds shrunk                                        | **caught** | Editor ×1                                                   |
+| flat background                          | no gradient                                               | **caught** | Editor ×1                                                   |
+| knob added but hidden                    | addChildComponent instead of addAndMakeVisible            | **caught** | Editor ×1                                                   |
+| knob loses its ID                        | no setComponentID                                         | **caught** | Editor ×8                                                   |
+| look-and-feel never installed            | setLookAndFeel call removed                               | **caught** | Editor ×1                                                   |
+| look-and-feel on every label             | the check for "is this the knob's box" removed            | **caught** | Editor ×1                                                   |
+| value text fixed size again              | font back to 15 pt                                        | **caught** | Editor ×1                                                   |
+| value text taller than its box           | font 1.5× the box height                                  | **caught** | Editor ×1                                                   |
+| look-and-feel not detached               | setLookAndFeel (nullptr) removed from the destructor      | **caught** | the run fails on JUCE's assertion                           |
+| denormal guard removed                   | no ScopedNoDenormals                                      | survived   | —                                                           |
+| unused output channels not cleared       | drop the clear() loop                                     | survived   | —                                                           |
 
-**27 of 29 were caught.** Alongside them I ran the unmodified plugin through the same tests: it
+**32 of 34 were caught** (plus one change that turned out to leave the program just as correct, explained below). Alongside them I ran the unmodified plugin through the same tests: it
 passes every one, which is the control. Without a control, a failure could just mean the harness is
 broken. (Mine briefly was: an early run reported the *unmodified* plugin failing, because the build
 was reusing a stale binary from the previous variant. The harness now stops if its control fails.)
 
-The ten editor rows were added in Phase 6, and the first round found a real gap: with the knob
+The fifteen editor rows were added in Phase 6, and the first round found a real gap. With the knob
 added to the window but *hidden*, the "it draws" test still passed, because the background gradient
 alone makes the middle of the window differ from a corner. The test now compares the picture with
 the knob shown against the same window with it hidden, and that mutant is caught. (One of my first
-mutants didn't even compile, so it proved nothing; I fixed the edit and ran it again.)
+mutants didn't even compile, so it proved nothing. I fixed the edit and ran it again.)
+
+Forgetting to detach the look-and-feel survived too, for a different reason: JUCE reports that
+mistake with a debug assertion, which only *logs* and doesn't fail anything. So `tests/main.cpp` now
+counts assertions and fails the run if there are any (the summary line says "0 JUCE assertions").
+Tests that feed corrupt data on purpose still swallow the assertions JUCE raises about that data.
+One more mutant, the look-and-feel declared after the slider, still "survives", and correctly: with
+the detach in place it's an equally correct program, so there's nothing for a test to catch.
 
 This was a one-off check, with the harness kept outside the repo: it copies the plugin source,
 applies one deliberate break, rebuilds just those files, and runs the real tests against the result.
@@ -222,7 +234,7 @@ Floats need care: the build's strict warning flags include `-Wfloat-equal`, so c
 
 ### What they can't tell you
 
-They test the GUI's *behaviour* and layout, not whether it looks or feels good (there's a snapshot mode for looking: see [The editor (GUI) §10](editor-gui.md#10-testing-a-gui-with-no-screen)). They don't test how a particular DAW behaves, changes of sample rate in the middle of
+They test the GUI's *behaviour* and layout, not whether it looks or feels good (there's a snapshot mode for looking: see [The editor (GUI) §11](editor-gui.md#11-testing-a-gui-with-no-screen)). They don't test how a particular DAW behaves, changes of sample rate in the middle of
 playback, or what anything sounds like. `auval` and a listen in a real DAW still matter, and the
 [checklist in §1](#1-how-do-you-actually-test-a-gain-plugin-standalone) is still the way to hear
 it.

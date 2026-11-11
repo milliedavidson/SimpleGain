@@ -1,7 +1,7 @@
 # State: save and restore
 
-How the gain survives closing and reopening a project: what a host actually stores, the path
-from a fader to a few bytes in a project file, and why loading has to treat those bytes as
+How the gain survives closing and reopening a project. It covers what a host actually stores, the
+path from a fader to a few bytes in a project file, and why loading has to treat those bytes as
 untrusted.
 
 **SimpleGain docs** · [Index](README.md)  
@@ -143,12 +143,12 @@ supplies the object, the callee fills it — is the C# `out`/`ref` idea.
 
 `copyXmlToBinary` writes a small envelope; I confirmed the layout from JUCE's source:
 
-| Bytes | Content |
-|---|---|
-| 4 | a magic number, `0x21324356`, so it can recognise its own data |
-| 4 | the length of the XML text |
-| 109 | the XML text itself (UTF-8, on one line) |
-| 1 | a closing zero byte |
+| Bytes | Content                                                        |
+|-------|----------------------------------------------------------------|
+| 4     | a magic number, `0x21324356`, so it can recognise its own data |
+| 4     | the length of the XML text                                     |
+| 109   | the XML text itself (UTF-8, on one line)                       |
+| 1     | a closing zero byte                                            |
 
 That's the 118 bytes. Loading is the reverse, and note the signature:
 
@@ -178,13 +178,13 @@ disk or sync trouble, written by a *different* plugin, or written by an older or
 this one. A crash here means **the user's project won't open**, and the plugin takes the blame.
 So every step is a gate:
 
-| Gate | What gets through | What happens otherwise |
-|---|---|---|
+| Gate               | What gets through                                          | What happens otherwise                                                    |
+|--------------------|------------------------------------------------------------|---------------------------------------------------------------------------|
 | `getXmlFromBinary` | well-formed data of the right length with our magic number | returns nothing: empty, truncated, wrong-magic or non-XML data is ignored |
-| exact tag match | a document whose root is `PARAMETERS` | someone else's document is ignored |
-| `replaceState` | `PARAM` entries whose `id` is one we know | unknown ids are ignored |
-| value handling | numbers inside the parameter's range | out-of-range values are clamped (`999` → `+30`, `-999` → `-60`) |
-| missing entries | — | a parameter absent from the saved state returns to its **default** |
+| exact tag match    | a document whose root is `PARAMETERS`                      | someone else's document is ignored                                        |
+| `replaceState`     | `PARAM` entries whose `id` is one we know                  | unknown ids are ignored                                                   |
+| value handling     | numbers inside the parameter's range                       | out-of-range values are clamped (`999` → `+30`, `-999` → `-60`)           |
+| missing entries    | —                                                          | a parameter absent from the saved state returns to its **default**        |
 
 ### What testing turned up
 
@@ -245,11 +245,11 @@ side.
 
 ## 9. What's permanent, and what changing it breaks
 
-| Permanent | Why |
-|---|---|
-| the root tag `PARAMETERS` | the name passed to the `AudioProcessorValueTreeState` constructor; the exact-match check rejects anything else |
-| the parameter id `"gain"` | it's the `id` stored in every saved project |
-| the `PARAM` / `id` / `value` names | JUCE's, not ours — but they're in every saved file |
+| Permanent                          | Why                                                                                                            |
+|------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| the root tag `PARAMETERS`          | the name passed to the `AudioProcessorValueTreeState` constructor; the exact-match check rejects anything else |
+| the parameter id `"gain"`          | it's the `id` stored in every saved project                                                                    |
+| the `PARAM` / `id` / `value` names | JUCE's, not ours — but they're in every saved file                                                             |
 
 A test records today's format as a literal XML string and checks it still loads. **If that test
 ever has to change, saved projects have broken.** Others lock the id, its version hint, and the

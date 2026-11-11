@@ -43,6 +43,21 @@ is an experienced C# developer new to C++, so the code is explained — but ther
 The reason for the split: at one point `PluginProcessor.cpp` was 55% comments, and the code
 became hard to read *because* of the explanations. Prose and code have different jobs.
 
+### Writing style: British English, short sentences, aligned tables
+
+These apply to every doc, to the README, and to code comments. `scripts/check-docs.py` enforces
+all three, and CLion's own checks flag the same things in the editor.
+
+- **British spelling:** colour, behaviour, initialise, serialisation, analyser, centre, artefact.
+  Leave code identifiers and tool names alone (`juce::Colour` is already British, and
+  AddressSanitizer keeps its name). Don't rename an API to fit.
+- **Sentences of 35 words or fewer.** Split a long one at a colon, a dash or a "which", or turn a
+  chain of semicolons into separate sentences. A list of items is better as bullets than as one
+  sentence with five commas.
+- **Tables are aligned**: every cell padded so the pipes line up, and the separator row's dashes
+  filling the column, exactly as CLion's *Reformat Code* lays them out. Don't align by hand. Write
+  the table roughly, then run `python3 scripts/check-docs.py --fix`.
+
 ### `processBlock` is real-time — keep it that way
 
 `processBlock` runs roughly 100 times a second (94 at a 512-sample block) against a hard
@@ -87,9 +102,9 @@ a range), [CMake walkthrough](documentation/cmake-walkthrough.md).
 
 ### Keep the docs in step with the code
 
-When a change alters something a doc states — a range, an identity value, a phase's status, a
-section or file name — update the doc, the **Status** list in `README.md`, and the "In short" in
-`documentation/plan.md` **in the same change**. These have all gone stale before.
+When a change alters something a doc states, update the doc **in the same change**. That covers a
+range, an identity value, a phase's status, or a section or file name. Update the **Status** list in
+`README.md` and the "In short" in `documentation/plan.md` too. These have all gone stale before.
 
 Before calling docs work done, run the checker — it must exit 0:
 
@@ -97,13 +112,20 @@ Before calling docs work done, run the checker — it must exit 0:
 python3 scripts/check-docs.py
 ```
 
-It checks that every link and `#anchor` resolves, every referenced image exists (and none is
-orphaned), every `documentation/<file>.md section N` pointer in `Source/` and `CMakeLists.txt`
-names a section that really exists, `documentation/README.md` lists every doc, every doc has an
-"In short" block and a nav line linking the others, code fences are well-formed and every
-cmake code block is valid CMake (an argument fragment on its own isn't — wrap it in its command,
-because CLion flags those as errors). Never
-hand-guess an anchor — GitHub turns each space into its own hyphen, so an em dash between two
+It checks, among other things, that:
+
+- every link and `#anchor` resolves, and every referenced image exists (and none is orphaned)
+- every `documentation/<file>.md section N` pointer in `Source/` and `CMakeLists.txt` names a
+  section that really exists
+- `documentation/README.md` lists every doc, and every doc has an "In short" block and a nav line
+  linking the others
+- code fences are well-formed, and every `cmake` code block is valid CMake (an argument fragment on
+  its own isn't, so wrap it in its command, because CLion flags those as errors)
+- tables are aligned the way CLion formats them (`python3 scripts/check-docs.py --fix` re-aligns them)
+- spelling is British, in prose and in code comments (see "Writing style" below)
+- no sentence is longer than 35 words
+
+Never hand-guess an anchor. GitHub turns each space into its own hyphen, so an em dash between two
 spaced words gives a **double** hyphen. If you find a new way docs can break, add a check to the
 script rather than a sentence here.
 
@@ -125,7 +147,9 @@ documentation/images/banner.svg   README hero image
 - **Run the tests after any change to `Source/`:** `cmake --build build --target check`. Every
   test must pass. A change in behaviour needs a test — write it *first*, watch it fail, then make
   it pass. The first build compiles JUCE a second time (a few minutes); after that it's quick.
-  How the tests work, and how to add one: `documentation/testing.md`.
+  The run also fails if JUCE raises any debug assertion (the summary line says "0 JUCE
+  assertions"), so don't silence one — it means a rule was broken. How the tests work, and how
+  to add one: `documentation/testing.md`.
 - Rebuild and actually run before calling something done:
   `cmake --build build --target SimpleGain_Standalone -j 8`, then open the `.app`.
 - After **any** change to `Source/` or `CMakeLists.txt` — not just identity — rebuild all three
@@ -140,9 +164,9 @@ documentation/images/banner.svg   README hero image
 
 ## Related
 
-All documentation lives in **[`documentation/`](documentation/README.md)** in this repo, and is
-meant to be a **one-stop shop** for someone learning audio plugin development — not just the
-plugin-specific material (hosting, parameters, `auval`, CI) but the general C++ foundations too
+All documentation lives in **[`documentation/`](documentation/README.md)** in this repo. It's meant
+to be a **one-stop shop** for someone learning audio plugin development. That means the
+plugin-specific material (hosting, parameters, `auval`, CI) and the general C++ foundations too
 (stack vs heap, RAII, the compile/link pipeline).
 
 That's deliberate: someone arriving from a managed language needs the language fundamentals as

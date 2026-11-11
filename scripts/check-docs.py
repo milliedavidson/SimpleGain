@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that SimpleGain's documentation hangs together.
 
-Run it from anywhere:   python3 scripts/check-docs.py
+Run it from anywhere:   python3 scripts/check-docs.py        (add --fix to re-align tables)
 Exit code 0 = all good, 1 = problems found (so CI can use it).
 
 It checks that:
@@ -13,6 +13,9 @@ It checks that:
   5. every doc has an "In short" block and a nav line linking all the other docs
   6. code fences start their line and pair up (a mangled fence breaks the whole page)
   7. every ```cmake block is syntactically valid CMake (CLion parses them and flags errors)
+  8. every table is aligned the way CLion's formatter lays it out (--fix rewrites them)
+  9. prose and code comments use British spelling (colour, initialise, behaviour ...)
+ 10. no sentence is longer than MAX_SENTENCE_WORDS words
 
 Standard library only. Anchors follow GitHub's rules: lowercase the heading, strip punctuation,
 then turn each space into its own hyphen -- so an em dash between two spaced words produces a
@@ -101,6 +104,156 @@ anchors = {
     for p in md_files
 }
 
+
+# Style rules -------------------------------------------------------------------------------
+MAX_SENTENCE_WORDS = 35          # CLion's grammar check starts flagging around 40; this leaves headroom
+FIX = "--fix" in sys.argv
+
+NAV_STARTS = ("**SimpleGain docs**", "**The plugin:**", "**C++ foundations:**", "**Workflow:**")
+SEPARATOR = re.compile(r"^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$")
+
+
+def split_row(line):
+    """The cells of a table row. Only an unescaped | divides cells, as on GitHub."""
+    parts = re.split(r"(?<!\\)\|", line.strip())
+    if parts and parts[0] == "":
+        parts = parts[1:]
+    if parts and parts[-1] == "":
+        parts = parts[:-1]
+    return [c.strip() for c in parts]
+
+
+def format_table(rows):
+    """Lay a table out as CLion does: every cell padded to its column's width, so the pipes line up,
+    and the separator row's dashes filling the column. Alignment colons (:---, ---:) are kept."""
+    cells = [split_row(r) for r in rows]
+    width = len(cells[0])
+    cells = [(c + [""] * width)[:width] for c in cells]
+    marks = [(c.startswith(":"), c.endswith(":")) for c in cells[1]]
+    body = [cells[0]] + cells[2:]
+    sizes = [max(3, *(len(row[i]) for row in body)) for i in range(width)]
+
+    def line(row):
+        return "| " + " | ".join(c.ljust(sizes[i]) for i, c in enumerate(row)) + " |"
+
+    def dashes(i):
+        left, right = marks[i]
+        return (":" if left else "-") + "-" * sizes[i] + (":" if right else "-")
+
+    return [line(cells[0]), "|" + "|".join(dashes(i) for i in range(width)) + "|"] + [line(r) for r in cells[2:]]
+
+
+def find_tables(lines):
+    """(first, last) line indexes of each table outside code fences. A table is a run of lines starting
+    with | whose second line is a separator row."""
+    found, in_fence, i = [], False, 0
+    while i < len(lines):
+        if re.match(FENCE, lines[i]):
+            in_fence = not in_fence
+        if not in_fence and lines[i].lstrip().startswith("|") and i + 1 < len(lines) \
+                and SEPARATOR.match(lines[i + 1]) and lines[i + 1].lstrip().startswith("|"):
+            j = i
+            while j + 1 < len(lines) and lines[j + 1].lstrip().startswith("|"):
+                j += 1
+            found.append((i, j))
+            i = j
+        i += 1
+    return found
+
+
+# US spellings that British English writes differently. Matched as whole words in prose and comments,
+# never inside code. -ize is handled separately because "size" and friends are fine.
+US_SPELLINGS = {
+    "color": "colour", "colors": "colours", "colored": "coloured", "behavior": "behaviour",
+    "behaviors": "behaviours", "favorite": "favourite", "honor": "honour", "neighbor": "neighbour",
+    "center": "centre", "centers": "centres", "centered": "centred", "gray": "grey",
+    "analyze": "analyse", "analyzer": "analyser", "analyzers": "analysers", "analyzed": "analysed", "analyzing": "analysing", "catalog": "catalogue",
+    "defense": "defence", "labeled": "labelled", "labeling": "labelling", "modeling": "modelling",
+    "modeled": "modelled", "canceled": "cancelled", "traveling": "travelling", "fulfill": "fulfil",
+    "acknowledgment": "acknowledgement", "aluminum": "aluminium", "artifacts": "artefacts",
+    "artifact": "artefact",
+}
+PROPER_NAMES = {"addresssanitizer", "memorysanitizer", "threadsanitizer"}     # tool names keep their spelling
+NOT_IZE = {"size", "sizes", "sized", "sizing", "resize", "resized", "resizes", "resizing", "seize",
+           "seized", "prize", "prizes", "capsize", "maize", "oversize", "oversized", "downsize",
+           "upsize", "bonsize"}
+IZE = re.compile(r"\b[A-Za-z]{2,}(iz(?:e|es|ed|ing|ation|ations|er|ers))\b", re.I)
+
+
+def british_problems(text):
+    """US spellings in `text` (already stripped of code). Returns [(word, suggestion)]."""
+    out = []
+    for word in re.findall(r"[A-Za-z]+", text):
+        low = word.lower()
+        if low in PROPER_NAMES:
+            continue
+        if low in US_SPELLINGS:
+            out.append((word, US_SPELLINGS[low]))
+        elif IZE.fullmatch(word) and low not in NOT_IZE:
+            out.append((word, re.sub(r"iz(e|es|ed|ing|ation|ations|er|ers)$", r"is\1", word, flags=re.I)))
+    return out
+
+
+def plain(text):
+    """Prose with the markup removed: code spans and URLs gone, links reduced to their text."""
+    text = re.sub(r"`[^`]*`", "Code", text)
+    text = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"<[^>]+>", " ", text)
+    return re.sub(r"[*_]{1,3}", "", text)
+
+
+def prose_paragraphs(text):
+    """[(first_line_number, paragraph_text)] for the prose in a markdown file: no code fences, tables,
+    headings, nav lines, HTML or images. A list item is its own paragraph."""
+    paragraphs, current, start, in_fence = [], [], 0, False
+
+    def flush():
+        nonlocal current
+        if current:
+            paragraphs.append((start, " ".join(current)))
+        current = []
+
+    for number, raw in enumerate(text.split("\n"), start=1):
+        if re.match(FENCE, raw):
+            flush()
+            in_fence = not in_fence
+            continue
+        stripped = raw.strip()
+        skip = (in_fence or not stripped or stripped.startswith(("#", "|", "<", "!", "---", "[!"))
+                or stripped.startswith(NAV_STARTS))
+        if skip:
+            flush()
+            continue
+        stripped = re.sub(r"^>\s*", "", stripped)
+        if re.match(r"([-*+]|\d+\.)\s", stripped):
+            flush()
+            stripped = re.sub(r"^([-*+]|\d+\.)\s+", "", stripped)
+        if not current:
+            start = number
+        current.append(stripped)
+    flush()
+    return paragraphs
+
+
+def sentences(paragraph):
+    text = plain(paragraph)
+    for abbreviation in ("e.g.", "i.e.", "vs.", "etc.", "approx."):
+        text = text.replace(abbreviation, abbreviation.replace(".", ""))
+    return [x for x in re.split(r"(?<=[.!?])\s+(?=[A-Z\"(\[])", text) if x.strip()]
+
+
+def comment_text(path):
+    """[(line_number, comment text)] for the // and # comments in a C++ or CMake file."""
+    out = []
+    marker = "#" if path.name == "CMakeLists.txt" else "//"
+    for number, line in enumerate(path.read_text().split("\n"), start=1):
+        if marker in line:
+            out.append((number, line.split(marker, 1)[1]))
+        elif re.match(r"\s*(/\*\*?|\*)", line):
+            out.append((number, line))
+    return out
+
+
 # 1. links and anchors ---------------------------------------------------------------------
 for f in md_files:
     for link in re.findall(r"\]\(([^)\s]+)\)", strip_code_blocks(f.read_text())):
@@ -181,6 +334,42 @@ for f in md_files:
             line = text[:block.start()].count("\n") + 1
             problems.append(f"{rel(f)}:{line}: ```cmake block is not valid CMake ({error}) -- "
                             f"wrap argument fragments in their command, e.g. juce_add_plugin(...)")
+
+# 8. tables aligned like CLion's formatter ------------------------------------------------------
+for f in md_files:
+    lines = f.read_text().split("\n")
+    changed = False
+    for first, last in reversed(find_tables(lines)):
+        wanted = format_table(lines[first:last + 1])
+        if wanted != lines[first:last + 1]:
+            if FIX:
+                lines[first:last + 1] = wanted
+                changed = True
+            else:
+                problems.append(f"{rel(f)}:{first + 1}: table is not aligned -- "
+                                f"run python3 scripts/check-docs.py --fix")
+    if changed:
+        f.write_text("\n".join(lines))
+        print(f"re-aligned tables in {rel(f)}")
+
+# 9. British spelling, in prose and in code comments -------------------------------------------
+style_sources = [(f, [(n, plain(t)) for n, t in prose_paragraphs(f.read_text())]) for f in md_files]
+for src in code_files + sorted((ROOT / "tests").glob("*")):
+    if src.is_file():
+        style_sources.append((src, [(n, plain(t)) for n, t in comment_text(src)]))
+for f, chunks in style_sources:
+    for number, text in chunks:
+        for word, suggestion in british_problems(text):
+            problems.append(f"{rel(f)}:{number}: American spelling '{word}' -> '{suggestion}'")
+
+# 10. sentence length ----------------------------------------------------------------------------
+for f in md_files:
+    for number, paragraph in prose_paragraphs(f.read_text()):
+        for sentence in sentences(paragraph):
+            words = len(re.findall(r"[\w'’-]+", sentence))
+            if words > MAX_SENTENCE_WORDS:
+                problems.append(f"{rel(f)}:{number}: sentence of {words} words (limit "
+                                f"{MAX_SENTENCE_WORDS}): {sentence[:70]}...")
 
 # report ---------------------------------------------------------------------------------------
 print(f"checked {len(md_files)} markdown files, {len(docs)} docs, {len(present)} images")

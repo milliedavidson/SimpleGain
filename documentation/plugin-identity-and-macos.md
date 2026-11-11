@@ -27,12 +27,12 @@ crash that killed the standalone app on first launch.
 
 ## 1. COMPANY_NAME, BUNDLE_ID and PLUGIN_MANUFACTURER_CODE — what will customers see?
 
-| Field | Current value | Visible to users? | Where |
-|---|---|---|---|
-| `COMPANY_NAME` | `Maxximum Displacement` | **Yes, prominently** | The "Manufacturer" column in every DAW's plugin browser. Users browse by it. |
-| `PLUGIN_MANUFACTURER_CODE` | `Mxdp` | Rarely | Technical AU identifier. Shows up in `auval`, crash logs, some plugin managers. |
-| `PLUGIN_CODE` | `Sgai` | Rarely | Same — technical AU identifier for this specific plugin. |
-| `BUNDLE_ID` | `com.maxximumdisplacement.simplegain` | Almost never | macOS internal identity. Appears in crash reports and permission dialogs. |
+| Field                      | Current value                         | Visible to users?    | Where                                                                           |
+|----------------------------|---------------------------------------|----------------------|---------------------------------------------------------------------------------|
+| `COMPANY_NAME`             | `Maxximum Displacement`               | **Yes, prominently** | The "Manufacturer" column in every DAW's plugin browser. Users browse by it.    |
+| `PLUGIN_MANUFACTURER_CODE` | `Mxdp`                                | Rarely               | Technical AU identifier. Shows up in `auval`, crash logs, some plugin managers. |
+| `PLUGIN_CODE`              | `Sgai`                                | Rarely               | Same — technical AU identifier for this specific plugin.                        |
+| `BUNDLE_ID`                | `com.maxximumdisplacement.simplegain` | Almost never         | macOS internal identity. Appears in crash reports and permission dialogs.       |
 
 **How to choose:**
 
@@ -81,7 +81,7 @@ The three codes:
 - `Mxdp` = our `PLUGIN_MANUFACTURER_CODE`
 
 It rendered audio at sample rates from 11 kHz to 192 kHz, at block sizes from 64 to 4096
-frames (including deliberately awkward ones like 137), checked mono and stereo, and checked
+frames (including deliberately awkward ones like 137), and checked mono and stereo. It also checked
 that we correctly *fail* when handed an illegal buffer size. Ours passed on the first run.
 
 **Worth knowing:** if `auval` fails, Logic will refuse to load the plugin and won't tell you
@@ -98,12 +98,12 @@ is what most people wire into CI.
 
 Why AAX is different from every other format:
 
-| | VST3 / AU | AAX |
-|---|---|---|
-| SDK | Free, public download | Requires an Avid developer account and a signed **NDA** |
-| Can you build one? | Yes, today | Only after Avid approves you |
-| Will Pro Tools load your build? | n/a | **No** — AAX plugins must be **digitally signed with a PACE key** |
-| Cost of the signing key | n/a | A paid PACE/iLok developer account |
+|                                 | VST3 / AU             | AAX                                                               |
+|---------------------------------|-----------------------|-------------------------------------------------------------------|
+| SDK                             | Free, public download | Requires an Avid developer account and a signed **NDA**           |
+| Can you build one?              | Yes, today            | Only after Avid approves you                                      |
+| Will Pro Tools load your build? | n/a                   | **No** — AAX plugins must be **digitally signed with a PACE key** |
+| Cost of the signing key         | n/a                   | A paid PACE/iLok developer account                                |
 
 That last row is the real blocker. Even with the SDK, an unsigned AAX plugin won't load in
 normal Pro Tools. You'd need either a paid PACE developer account, or a special

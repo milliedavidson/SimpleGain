@@ -54,7 +54,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout
 //  Construction
 //==============================================================================
 SimpleGainAudioProcessor::SimpleGainAudioProcessor()
-    // Everything between `:` and `{` is the member initializer list — members
+    // Everything between `:` and `{` is the member initialiser list — members
     // are CONSTRUCTED with these values rather than assigned afterwards.
     : AudioProcessor (BusesProperties()
                         .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
@@ -174,7 +174,7 @@ juce::AudioProcessorEditor* SimpleGainAudioProcessor::createEditor()
 {
     // A factory: the host calls this each time the window opens, and deletes
     // the result when it closes. Bare `new` is correct here because the host
-    // takes ownership. -> documentation/editor-gui.md section 9
+    // takes ownership. -> documentation/editor-gui.md section 10
     return new SimpleGainAudioProcessorEditor (*this);
 }
 
