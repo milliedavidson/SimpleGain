@@ -77,3 +77,45 @@ target_link_libraries(SimpleGain
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
+
+# Offline tests: a console app that drives the real processor with no DAW and no
+# sound card. Excluded from the default build (it compiles JUCE a second time).
+#   cmake --build build --target check
+# -> documentation/testing.md section 2, documentation/cmake-walkthrough.md section 10
+enable_testing()
+
+juce_add_console_app(SimpleGain_Tests PRODUCT_NAME "SimpleGain_Tests")
+set_target_properties(SimpleGain_Tests PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+target_sources(SimpleGain_Tests
+    PRIVATE
+        tests/main.cpp
+        tests/GainSmoothingTests.cpp
+        tests/ParameterTests.cpp
+        tests/StateTests.cpp
+        tests/CorruptStateTests.cpp
+        Source/PluginProcessor.cpp
+        Source/PluginEditor.cpp)
+
+target_include_directories(SimpleGain_Tests PRIVATE Source tests)
+
+target_compile_definitions(SimpleGain_Tests
+    PRIVATE
+        "JucePlugin_Name=\"SimpleGain\""   # normally supplied by juce_add_plugin
+        JUCE_LOG_ASSERTIONS=1                # lets the tests filter JUCE's own assertion messages
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0)
+
+target_link_libraries(SimpleGain_Tests
+    PRIVATE
+        juce::juce_audio_utils
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags)
+
+add_test(NAME SimpleGain_Tests COMMAND SimpleGain_Tests)
+
+# `cmake --build build --target check` = build the tests, then run them.
+add_custom_target(check
+    COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIG> --output-on-failure
+    DEPENDS SimpleGain_Tests
+    USES_TERMINAL)

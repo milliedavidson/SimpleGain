@@ -76,6 +76,10 @@ first:**
 - **`JUCE_VST3_CAN_REPLACE_VST2`:** JUCE warns that changing it makes the VST3 incompatible with
   previous versions.
 
+These are locked by tests (`tests/ParameterTests.cpp` and the saved-format tests in
+`tests/StateTests.cpp`). **If one of those fails, a permanent thing has changed — don't "fix" the
+test to match; stop and ask.**
+
 Nothing has been released yet, so these *can* still change — which is exactly the moment to ask,
 not afterwards. Detail: [Identity & macOS](documentation/plugin-identity-and-macos.md),
 [Parameters & automation](documentation/parameters-and-automation.md) (the section on choosing
@@ -109,6 +113,7 @@ script rather than a sentence here.
 CMakeLists.txt              the build script
 libs/JUCE/                  JUCE 8, as a git submodule — not committed source
 Source/                     the plugin: PluginProcessor.{h,cpp}, PluginEditor.{h,cpp}
+tests/                      the offline tests — `cmake --build build --target check`
 .github/workflows/build.yml CI — builds all 3 formats, validates the AU with auval
 scripts/check-docs.py         verifies the docs hang together — see "Keep the docs in step"
 documentation/              the reasoning behind the code — see documentation/README.md
@@ -117,6 +122,10 @@ documentation/images/banner.svg   README hero image
 
 ## Verifying changes
 
+- **Run the tests after any change to `Source/`:** `cmake --build build --target check`. Every
+  test must pass. A change in behaviour needs a test — write it *first*, watch it fail, then make
+  it pass. The first build compiles JUCE a second time (a few minutes); after that it's quick.
+  How the tests work, and how to add one: `documentation/testing.md`.
 - Rebuild and actually run before calling something done:
   `cmake --build build --target SimpleGain_Standalone -j 8`, then open the `.app`.
 - After **any** change to `Source/` or `CMakeLists.txt` — not just identity — rebuild all three

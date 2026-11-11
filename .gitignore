@@ -1,5 +1,6 @@
 # Build output — generated, never committed
 build/
+build-*/
 cmake-build-*/
 
 # CLion / JetBrains project settings

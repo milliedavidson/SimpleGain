@@ -79,10 +79,16 @@ SimpleGainAudioProcessor::~SimpleGainAudioProcessor() = default;
 //==============================================================================
 void SimpleGainAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // The host's "here are the conditions, allocate now" call. Nothing to
-    // prepare yet. ignoreUnused silences the unused-parameter warning, like
-    // C#'s `_` discard.
-    juce::ignoreUnused (sampleRate, samplesPerBlock);
+    juce::ignoreUnused (samplesPerBlock);
+
+    // A 20 ms glide, converted to samples using the host's real sample rate.
+    smoothedGain.reset (sampleRate, gainRampSeconds);
+
+    // reset() leaves the value at 0, so start AT the fader's position — or
+    // playback would fade in from silence.
+    // -> documentation/smoothing-and-the-audio-loop.md section 3
+    smoothedGain.setCurrentAndTargetValue (
+        juce::Decibels::decibelsToGain (gainDbParameter->load()));
 }
 
 void SimpleGainAudioProcessor::releaseResources()
@@ -108,6 +114,10 @@ void SimpleGainAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 {
     juce::ignoreUnused (midiMessages);
 
+    // RAII guard: until this scope ends, denormal floats are flushed to zero.
+    // Left alone they can stall the CPU. -> documentation/smoothing-and-the-audio-loop.md section 7
+    juce::ScopedNoDenormals noDenormals;
+
     // Buffers are reused between calls and are NOT zeroed, so any output
     // channel without a matching input still holds last call's audio.
     const auto numInputChannels  = getTotalNumInputChannels();
@@ -117,18 +127,38 @@ void SimpleGainAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         buffer.clear (channel, 0, buffer.getNumSamples());
 
     // .load() reads the atomic — explicit, so a non-atomic read can't happen
-    // by accident.
+    // by accident. dB -> multiplier, because multiplying is what changes loudness.
     const auto gainInDecibels = gainDbParameter->load();
 
-    // dB -> multiplier, because multiplying is what actually changes loudness.
-    const auto gainLinear = juce::Decibels::decibelsToGain (gainInDecibels);
+    // Cheap to call every block: it does nothing unless the value has changed.
+    smoothedGain.setTargetValue (juce::Decibels::decibelsToGain (gainInDecibels));
 
-    buffer.applyGain (gainLinear);
+    const auto numSamples  = buffer.getNumSamples();
+    const auto numChannels = buffer.getNumChannels();
 
-    // KNOWN FLAW, deliberately left in: this reads the fader once per BLOCK and
-    // applies one value to all ~512 samples, so fast fader moves step rather
-    // than slide — audible as zipper noise. Phase 4 fixes it with SmoothedValue.
-    // -> documentation/parameters-and-automation.md section 6
+    if (smoothedGain.isSmoothing())
+    {
+        // Samples OUTER, channels INNER: the gain must advance once per sample
+        // and be the same for every channel.
+        // -> documentation/smoothing-and-the-audio-loop.md sections 4 and 5
+        //
+        // `channels[channel][sample]` indexes a raw float array — no bounds check.
+        // -> documentation/smoothing-and-the-audio-loop.md section 6
+        auto* const* channels = buffer.getArrayOfWritePointers();
+
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            const auto gain = smoothedGain.getNextValue();
+
+            for (int channel = 0; channel < numChannels; ++channel)
+                channels[channel][sample] *= gain;
+        }
+    }
+    else
+    {
+        // Steady gain: one multiply across the whole block.
+        buffer.applyGain (smoothedGain.getTargetValue());
+    }
 }
 
 
@@ -151,16 +181,27 @@ juce::AudioProcessorEditor* SimpleGainAudioProcessor::createEditor()
 
 
 //==============================================================================
-//  Save / restore — implemented in Phase 5
+//  Save / restore
 //==============================================================================
 void SimpleGainAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    juce::ignoreUnused (destData);
+    // parameters -> ValueTree -> XML -> bytes. copyState() is a thread-safe
+    // snapshot of every parameter's current value; it takes a lock, which is
+    // fine here because hosts call this off the audio thread.
+    // -> documentation/state-save-and-restore.md sections 2 and 8
+    if (const auto xml = apvts.copyState().createXml())
+        copyXmlToBinary (*xml, destData);
 }
 
 void SimpleGainAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    juce::ignoreUnused (data, sizeInBytes);
+    // These bytes come out of a project file, so trust nothing: it must be
+    // readable XML AND our document, otherwise ignore it. The tag is compared
+    // exactly: hasTagName() ignores case, but XML tags are case-sensitive.
+    // -> documentation/state-save-and-restore.md section 6
+    if (const auto xml = getXmlFromBinary (data, sizeInBytes))
+        if (xml->getTagName() == apvts.state.getType().toString())
+            apvts.replaceState (juce::ValueTree::fromXml (*xml));
 }
 
 

@@ -4,7 +4,7 @@ The phased build plan for SimpleGain, a JUCE 8 gain plugin. Concept explanations
 troubleshooting live in the sibling files below, cross-linked from wherever they came up.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** **Plan** · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [Identity & macOS](plugin-identity-and-macos.md)  
+**The plugin:** **Plan** · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
@@ -12,9 +12,9 @@ troubleshooting live in the sibling files below, cross-linked from wherever they
 
 ## In short
 
-**Where this is up to:** Phases 0–4 are built and verified. The plugin builds as Standalone, AU
-and VST3, passes `auval`, has a host-automatable gain parameter, and glides between gain values
-instead of stepping. Next up is Phase 5 — saving and restoring state.
+**Where this is up to:** Phases 0–5 are built and verified. The plugin builds as Standalone, AU
+and VST3, passes `auval`, has a host-automatable gain parameter that glides instead of stepping,
+saves and restores its state, and has automated tests. Next up is Phase 6 — a real GUI.
 
 - The build is **CMake + JUCE 8 as a submodule** — no Projucer.
 - **Standalone is a dev tool**, not a product; AU and VST3 are the real outputs.
@@ -386,6 +386,17 @@ runtime, C++ genuinely cannot, so state must be described explicitly. `juce::Mem
 raw byte buffer.
 
 **Verification:** in the Standalone, set a gain, quit, relaunch, confirm the value persisted.
+
+**Status: built and tested; the by-hand check is yours.** Details, the real saved XML and the
+test findings are in [State: save and restore](state-save-and-restore.md). Where the build differs
+from the plan above:
+
+- **Written test-first, and the tests live in the repo.** Not in the plan: a `tests/` folder and a
+  `check` target (see [Testing §2](testing.md#2-automated-tests)). The Phase 5 tests were run
+  against the empty stubs first (60 pass, 10 fail), then the implementation made them green.
+- **The tag is compared exactly**, rather than with JUCE's `hasTagName()`, which ignores case.
+- **Still needs a human:** the Standalone check above, and saving then reopening a project in a
+  real DAW.
 
 ---
 

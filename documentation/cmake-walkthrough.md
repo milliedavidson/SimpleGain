@@ -4,7 +4,7 @@ A line-by-line tour of `CMakeLists.txt` — what each block does, why it's there
 are permanent. The file itself keeps its comments short and points here.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [Identity & macOS](plugin-identity-and-macos.md)  
+**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · **CMake walkthrough**  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
@@ -24,6 +24,8 @@ are permanent. The file itself keeps its comments short and points here.
 - **`PRIVATE` / `PUBLIC` control what flows on** to the format wrappers. JUCE's own docs say to
   link its three flag targets `PUBLIC`, so every wrapper gets the same flags.
 - **Debug builds are unoptimised** (`-O0`, no LTO). Judge audio performance on a Release build.
+- **The test app is a second target** that's excluded from the normal build, because it compiles
+  JUCE again. `cmake --build build --target check` builds and runs it.
 
 ---
 
@@ -357,3 +359,74 @@ With the Makefile generator, one build folder is one build type, hence the separ
 | `CMAKE_OSX_ARCHITECTURES "x86_64;arm64"` | Builds currently match the machine's own architecture, so an Intel Mac builds Intel-only.                            | Phase 8 — universal binary   |
 | `CMAKE_OSX_DEPLOYMENT_TARGET`            | Unset, so it follows the SDK you build with, which can make the plugin refuse to load on older macOS versions.       | Decide before release        |
 | `juce_generate_juce_header`              | Deliberately omitted — we `#include` module headers directly, which compiles faster and keeps dependencies explicit. | Never — it's a design choice |
+
+---
+
+## 10. The test target
+
+The end of `CMakeLists.txt` defines a second program: the offline test app. How the tests work is
+in [Testing §2](testing.md#2-automated-tests); this is the CMake behind it.
+
+```cmake
+enable_testing()
+
+juce_add_console_app(SimpleGain_Tests PRODUCT_NAME "SimpleGain_Tests")
+set_target_properties(SimpleGain_Tests PROPERTIES EXCLUDE_FROM_ALL TRUE)
+```
+
+**`enable_testing()`** switches on CTest, CMake's test runner, so that `add_test` has somewhere to
+register. It has to be in the top-level `CMakeLists.txt`.
+
+**`juce_add_console_app`** is JUCE's function for a command-line program: no plugin wrappers, no
+formats, just an executable. Like the plugin, it needs a version, from `project(... VERSION ...)`
+at the top; without one JUCE stops with *"must have its VERSION argument set, or must be part of a
+project with a PROJECT_VERSION"*. That's the other reason the version in `project()` matters.
+
+**`EXCLUDE_FROM_ALL`** means `cmake --build build` skips it unless you name it. The test app has
+to compile JUCE a second time, which takes a few minutes, and you don't want that on every
+plugin build. The target still exists, so CLion lists it and you can ask for it by name.
+
+```cmake
+target_sources(SimpleGain_Tests
+    PRIVATE
+        tests/main.cpp
+        tests/GainSmoothingTests.cpp
+        ...
+        Source/PluginProcessor.cpp
+        Source/PluginEditor.cpp)
+```
+
+The tests compile the plugin's **own two source files again**, straight into the test app, rather
+than linking to the plugin's static library. That's the simplest way to give the tests the same
+code and the same compiler flags without untangling what the JUCE-generated targets expose.
+
+```cmake
+target_compile_definitions(SimpleGain_Tests
+    PRIVATE
+        "JucePlugin_Name=\"SimpleGain\""
+        JUCE_LOG_ASSERTIONS=1
+        ...)
+```
+
+- **`JucePlugin_Name`** is a `#define` that `juce_add_plugin` normally supplies and our
+  `getName()` uses. A console app doesn't get it, so we provide it. The escaped quotes are
+  because the value has to be a C++ string literal, quotes included.
+- **`JUCE_LOG_ASSERTIONS=1`** makes JUCE send its assertion messages through its `Logger`. Without
+  it they go straight to the terminal, where the corrupt-data tests can't filter them. See
+  [State: save and restore §6](state-save-and-restore.md#6-loading-never-trust-the-bytes).
+
+```cmake
+add_test(NAME SimpleGain_Tests COMMAND SimpleGain_Tests)
+
+add_custom_target(check
+    COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIG> --output-on-failure
+    DEPENDS SimpleGain_Tests
+    USES_TERMINAL)
+```
+
+**`add_test`** registers the program with CTest, which runs it and treats exit code 0 as a pass.
+**`check`** is a convenience: a custom target that depends on the test app, so
+`cmake --build build --target check` builds it first and then runs CTest. `$<CONFIG>` is the
+build type (Debug, Release), which multi-configuration generators such as Xcode need; and
+`--output-on-failure` keeps passing tests quiet and shows the full output of failing ones.
+
