@@ -5,8 +5,8 @@ What a pipeline actually is, what went wrong with GitHub's default C/C++ templat
 on every push.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Identity & macOS](plugin-identity-and-macos.md)  
-**C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md)  
+**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md)  
+**C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · **CI & GitHub Actions**
 
 ---
@@ -75,9 +75,9 @@ name: Build & Validate
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
 
 jobs:
   build:
@@ -97,6 +97,9 @@ jobs:
 
       - name: Validate the AU with Apple's auval
         run: auval -v aufx Sgai Mxdp
+
+      - name: Run the offline tests
+        run: cmake --build build --target check -j 4
 ```
 
 Three details worth calling out:
@@ -109,6 +112,16 @@ Three details worth calling out:
 - **`auval -v aufx Sgai Mxdp`** as the final step — the exact same command run locally to
   validate the plugin (see [Plugin identity & macOS §2](plugin-identity-and-macos.md#2-where-do-i-find-auval)), so CI is genuinely
   checking "would Logic actually load this," not just "does it compile."
+- **`--target check`** as the last step runs the offline tests: it builds the test app (a second
+  compile of JUCE, which is why it's excluded from the normal build) and runs every test through
+  CTest. So CI now checks the *behaviour* — the gain glides, state survives, corrupt data can't
+  crash it — as well as "does it build" and "would Logic load it". See
+  [Testing §2](testing.md#2-automated-tests).
+- **`branches: [ "main", "develop" ]`** — appears twice and means two different things. Under
+  `push` it's the branch being pushed *to*; under `pull_request` it's the branch the PR is
+  *aimed at*. Both include `develop`, so work is checked as soon as it lands there, before it's
+  merged to `main`. A PR from `develop` into `main` is covered by the `main` entry — its commits
+  will already have had a push run, so that PR shows a second, duplicate run. Harmless.
 - **`runs-on: macos-latest`** — checked this against GitHub's own `runner-images` repo rather
   than assume: `macos-latest` currently means **Apple Silicon (arm64)**, and `macos-14` (the
   Intel-era default many older examples still show) is already **deprecated**. If an Intel
@@ -125,7 +138,7 @@ Azure VMs (GitHub is owned by Microsoft) that get created, used once, and thrown
 
 What makes that actually useful isn't "different hardware" — the architecture difference is
 just a property of *which runner label was chosen*, not something CI inherently requires (see
-§3 above — `macos-15-intel` would give an x86_64 runner matching the machine this was developed
+§2 above — `macos-15-intel` would give an x86_64 runner matching the machine this was developed
 on). The real value is three things a local Terminal can't give you:
 
 1. **A blank slate, every time.** Every run starts from an empty machine — nothing left over

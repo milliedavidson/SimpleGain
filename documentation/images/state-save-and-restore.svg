@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 640" width="940" height="640" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif">
+<rect width="940" height="640" fill="#ffffff"/>
+<text x="470" y="32" text-anchor="middle" font-size="19" font-weight="700" fill="#1f2328">Saving and reopening a project: the same gain, five different shapes</text>
+<text x="470" y="54" text-anchor="middle" font-size="12" fill="#57606a">The value changes form at every step. Loading is the same path in reverse, with checks added.</text>
+<defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#57606a"/></marker><marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#cf222e"/></marker></defs>
+<rect x="36" y="90" width="152" height="150" rx="9" fill="#fbefff" stroke="#8250df" stroke-width="2"/>
+<text x="112.0" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#8250df">1 · Parameter</text>
+<text x="112.0" y="136" text-anchor="middle" font-size="10.5" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">the fader</text>
+<text x="46" y="162" font-size="10.5" fill="#1f2328">a std::atomic&lt;float&gt;</text>
+<text x="46" y="179" font-size="10.5" fill="#1f2328">holding -12.3</text>
+<text x="46" y="196" font-size="10.5" fill="#1f2328">(a real dB value)</text>
+<text x="112.0" y="228" text-anchor="middle" font-size="9.5" font-style="italic" fill="#57606a">audio + GUI threads read it</text>
+<path d="M191 165 L217 165" stroke="#57606a" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="220" y="90" width="152" height="150" rx="9" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+<text x="296.0" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#0969da">2 · ValueTree</text>
+<text x="296.0" y="136" text-anchor="middle" font-size="10.5" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">apvts.copyState()</text>
+<text x="230" y="162" font-size="10.5" fill="#1f2328">a tree of properties</text>
+<text x="230" y="179" font-size="10.5" fill="#1f2328">PARAMETERS</text>
+<text x="230" y="196" font-size="10.5" fill="#1f2328">  PARAM id=gain value=-12.3</text>
+<text x="296.0" y="228" text-anchor="middle" font-size="9.5" font-style="italic" fill="#57606a">a copy, taken under a lock</text>
+<path d="M375 165 L401 165" stroke="#57606a" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="404" y="90" width="152" height="150" rx="9" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+<text x="480.0" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#1a7f37">3 · XML</text>
+<text x="480.0" y="136" text-anchor="middle" font-size="10.5" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">.createXml()</text>
+<text x="414" y="162" font-size="10.5" fill="#1f2328">readable text, the</text>
+<text x="414" y="179" font-size="10.5" fill="#1f2328">same tree written out</text>
+<text x="480.0" y="228" text-anchor="middle" font-size="9.5" font-style="italic" fill="#57606a">JUCE walks the tree</text>
+<path d="M559 165 L585 165" stroke="#57606a" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="588" y="90" width="152" height="150" rx="9" fill="#fff8c5" stroke="#bc4c00" stroke-width="2"/>
+<text x="664.0" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#bc4c00">4 · Bytes</text>
+<text x="664.0" y="136" text-anchor="middle" font-size="10.5" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">copyXmlToBinary()</text>
+<text x="598" y="162" font-size="10.5" fill="#1f2328">a juce::MemoryBlock:</text>
+<text x="598" y="179" font-size="10.5" fill="#1f2328">a small header + the XML</text>
+<text x="664.0" y="228" text-anchor="middle" font-size="9.5" font-style="italic" fill="#57606a">118 bytes in total</text>
+<path d="M743 165 L769 165" stroke="#57606a" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="772" y="90" width="152" height="150" rx="9" fill="#f6f8fa" stroke="#57606a" stroke-width="2"/>
+<text x="848.0" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#57606a">5 · Project file</text>
+<text x="848.0" y="136" text-anchor="middle" font-size="10.5" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">the host stores it</text>
+<text x="782" y="162" font-size="10.5" fill="#1f2328">inside the DAW's own</text>
+<text x="782" y="179" font-size="10.5" fill="#1f2328">project file, opaque to us</text>
+<text x="848.0" y="228" text-anchor="middle" font-size="9.5" font-style="italic" fill="#57606a">possibly for years</text>
+<text x="36" y="260" font-size="12" font-weight="700" fill="#1f2328">SAVE  (getStateInformation)</text>
+<rect x="36" y="274" width="868" height="88" rx="8" fill="#f6f8fa" stroke="#d0d7de"/>
+<text x="50" y="294" font-size="11" font-weight="700" fill="#1f2328">What is actually stored (step 3), from the real plugin</text>
+<text x="50" y="316" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">&lt;PARAMETERS&gt;&lt;PARAM id="gain" value="-12.29999923706055"/&gt;&lt;/PARAMETERS&gt;</text>
+<text x="50" y="340" font-size="10.5" fill="#57606a">Two permanent names are in there: the tag PARAMETERS and the id "gain". Rename either and every saved project stops restoring.</text>
+<text x="36" y="390" font-size="12" font-weight="700" fill="#1f2328">LOAD  (setStateInformation) — every host call is treated as untrusted</text>
+<rect x="36" y="404" width="196" height="112" rx="9" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
+<text x="134.0" y="426" text-anchor="middle" font-size="12.5" font-weight="700" fill="#cf222e">Is it readable?</text>
+<text x="134.0" y="446" text-anchor="middle" font-size="10" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">getXmlFromBinary()</text>
+<text x="134.0" y="470" text-anchor="middle" font-size="10.5" fill="#1f2328">empty, truncated or corrupt</text>
+<text x="134.0" y="485" text-anchor="middle" font-size="10.5" fill="#1f2328">bytes give back nothing</text>
+<path d="M235 460 L259 460" stroke="#57606a" stroke-width="2" marker-end="url(#ar)"/>
+<text x="134.0" y="536" text-anchor="middle" font-size="10" font-weight="700" fill="#cf222e">no: leave the gain as it is</text>
+<rect x="262" y="404" width="196" height="112" rx="9" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
+<text x="360.0" y="426" text-anchor="middle" font-size="12.5" font-weight="700" fill="#cf222e">Is it ours?</text>
+<text x="360.0" y="446" text-anchor="middle" font-size="10" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">tag == PARAMETERS</text>
+<text x="360.0" y="470" text-anchor="middle" font-size="10.5" fill="#1f2328">an exact match, including case;</text>
+<text x="360.0" y="485" text-anchor="middle" font-size="10.5" fill="#1f2328">anything else is ignored</text>
+<path d="M461 460 L485 460" stroke="#57606a" stroke-width="2" marker-end="url(#ar)"/>
+<text x="360.0" y="536" text-anchor="middle" font-size="10" font-weight="700" fill="#cf222e">no: leave the gain as it is</text>
+<rect x="488" y="404" width="196" height="112" rx="9" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+<text x="586.0" y="426" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1a7f37">Replace the state</text>
+<text x="586.0" y="446" text-anchor="middle" font-size="10" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">apvts.replaceState()</text>
+<text x="586.0" y="470" text-anchor="middle" font-size="10.5" fill="#1f2328">under a lock; unknown ids ignored,</text>
+<text x="586.0" y="485" text-anchor="middle" font-size="10.5" fill="#1f2328">values clamped to the range</text>
+<path d="M687 460 L711 460" stroke="#57606a" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="714" y="404" width="196" height="112" rx="9" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+<text x="812.0" y="426" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1a7f37">Pick it up</text>
+<text x="812.0" y="446" text-anchor="middle" font-size="10" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" fill="#1f2328">prepareToPlay()</text>
+<text x="812.0" y="470" text-anchor="middle" font-size="10.5" fill="#1f2328">the smoother starts AT the</text>
+<text x="812.0" y="485" text-anchor="middle" font-size="10.5" fill="#1f2328">restored value: no fade-in</text>
+<rect x="36" y="568" width="868" height="52" rx="8" fill="#ddf4ff" stroke="#0969da"/>
+<text x="50" y="590" font-size="11" font-weight="700" fill="#0969da">Tested, not assumed</text>
+<text x="50" y="608" font-size="10.5" fill="#1f2328">About 1,350 automated checks, including random noise, every truncation and every single corrupted byte. Also clean under UBSan and strict Guard Malloc.</text>
+</svg>

@@ -1,127 +1,121 @@
 # =============================================================================
 #  SimpleGain — a volume plugin built with JUCE 8
-# =============================================================================
-#  This file is the build script. In C# terms it plays the role of your .csproj
-#  AND your .sln, but with one important difference: CMake is a *generator*.
-#  It doesn't build anything itself — it reads this file and writes out the
-#  real build files (Makefiles / Ninja files / an Xcode project), which then do
-#  the building. CLion runs CMake for you automatically.
+#
+#  Comments are short on purpose: the line-by-line tour is in
+#  documentation/cmake-walkthrough.md. CMake is a generator — it reads this
+#  file and writes the real build files (Makefiles / Ninja / Xcode).
 # =============================================================================
 
-# The minimum CMake version this script relies on. JUCE 8 requires 3.22+.
-# You have 3.31.3, so we're fine.
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22)                # same minimum JUCE asks for
+project(SimpleGain VERSION 0.1.0 LANGUAGES C CXX)   # JUCE bundles C libraries too
 
-# Declares the project name and version, and tells CMake we're using C and C++.
-# (JUCE has a little C in it, hence both.)
-project(SimpleGain VERSION 0.1.0 LANGUAGES C CXX)
-
-# Use the C++17 standard, and require it rather than silently falling back.
-# C# just has "the language version"; C++ has a series of standards (11/14/17/20/23)
-# and you pick which one you're writing against. JUCE 8 needs at least 17.
+# JUCE needs C++17. REQUIRED = fail rather than quietly fall back to older.
+# -> documentation/cmake-walkthrough.md section 2
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# -----------------------------------------------------------------------------
-#  Bring in JUCE
-# -----------------------------------------------------------------------------
-#  There is no NuGet in C++. A dependency is *source code you compile yourself*.
-#  add_subdirectory() runs libs/JUCE/CMakeLists.txt, which defines targets like
-#  juce::juce_audio_utils that we can then link against below.
+# JUCE is a git submodule: source compiled alongside ours, no package manager.
+# -> documentation/cmake-walkthrough.md section 3
 add_subdirectory(libs/JUCE)
 
-# -----------------------------------------------------------------------------
-#  Define the plugin
-# -----------------------------------------------------------------------------
-#  juce_add_plugin is a function JUCE provides. From this single call it creates
-#  SEVERAL build targets — one per format (Standalone, VST3, AU) — plus a shared
-#  "SimpleGain" target holding the code they all have in common.
+# One call creates a shared-code static library plus a target per format.
+# -> documentation/cmake-walkthrough.md section 4
 juce_add_plugin(SimpleGain
 
-    # --- Identity -------------------------------------------------------
+    # Identity — permanent once anyone has a saved project. The 4-character
+    # codes have strict rules that fail silently.
+    # -> documentation/plugin-identity-and-macos.md section 1
     COMPANY_NAME                "Maxximum Displacement"
     BUNDLE_ID                   "com.maxximumdisplacement.simplegain"
-
-    # Four-character codes that uniquely identify you and this plugin.
-    # These are an ancient Apple convention and the rules are strict:
-    #   MANUFACTURER: first letter uppercase, rest lowercase.
-    #   PLUGIN_CODE:  EXACTLY one uppercase letter, first letter uppercase.
-    # Break these and the plugin builds fine but GarageBand silently ignores it.
     PLUGIN_MANUFACTURER_CODE    Mxdp
     PLUGIN_CODE                 Sgai
 
-    # --- What kind of plugin is this? -----------------------------------
-    IS_SYNTH                    FALSE   # we process audio, we don't generate it
-    NEEDS_MIDI_INPUT            FALSE   # no MIDI at all
+    # Plugin kind. These FALSE values are JUCE's defaults, written out so the
+    # file says what the plugin is. They also pick the AU type code (aufx).
+    IS_SYNTH                    FALSE
+    NEEDS_MIDI_INPUT            FALSE
     NEEDS_MIDI_OUTPUT           FALSE
     IS_MIDI_EFFECT              FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     VST3_CATEGORIES             "Fx" "Tools"
 
-    # --- macOS privacy permissions --------------------------------------
-    # macOS refuses to let an app touch the microphone or Bluetooth unless its
-    # Info.plist explains WHY, in a string shown to the user in the permission
-    # dialog. If the key is missing, macOS doesn't just deny access — it KILLS
-    # the process (a "TCC violation"). That's what crashed the standalone.
-    #
-    # Only the Standalone needs these: in a DAW, the HOST owns the microphone
-    # and has already asked for permission on its own behalf.
+    # Standalone only: macOS kills an app that touches the mic or Bluetooth
+    # without an Info.plist usage string.
+    # -> documentation/plugin-identity-and-macos.md section 4
     MICROPHONE_PERMISSION_ENABLED   TRUE
     MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear the plugin processing live sound."
     BLUETOOTH_PERMISSION_ENABLED    TRUE
     BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
 
-    # --- Which formats to build -----------------------------------------
-    #   Standalone = a normal .app you can run directly (our fast dev loop)
-    #   AU         = Audio Unit, for Logic Pro / GarageBand (macOS only)
-    #   VST3       = for Reaper / Ableton / Bitwig / Studio One
-    FORMATS                     Standalone AU VST3
-
-    # After each build, copy the AU/VST3 into ~/Library/Audio/Plug-Ins/
-    # so your DAW picks them up with no manual steps.
-    COPY_PLUGIN_AFTER_BUILD     TRUE
-
-    # The filename of the built plugin, and the name the DAW shows.
+    FORMATS                     Standalone AU VST3   # AU is macOS-only
+    COPY_PLUGIN_AFTER_BUILD     TRUE                 # installs into ~/Library/Audio/Plug-Ins
     PRODUCT_NAME                "SimpleGain")
 
-# -----------------------------------------------------------------------------
-#  Our source files
-# -----------------------------------------------------------------------------
-#  PRIVATE means "these files are used to build SimpleGain, but anything that
-#  links against SimpleGain does not inherit them". Roughly like `internal`.
+# Source files are listed explicitly — an unlisted .cpp is silently not built.
 target_sources(SimpleGain
     PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp)
 
-# -----------------------------------------------------------------------------
-#  Compile-time configuration
-# -----------------------------------------------------------------------------
-#  These become #define directives visible to every file. The C++ preprocessor
-#  is a text-substitution step that runs *before* compilation — there is no
-#  direct C# equivalent (the nearest thing is a #if DEBUG conditional).
-#  JUCE uses these flags to compile whole features in or out entirely.
+# Build-time switches that remove JUCE features from the binary entirely.
+# JUCE_USE_CURL is Linux-only (a no-op on macOS); JUCE_VST3_CAN_REPLACE_VST2
+# must not change after release.
+# -> documentation/cmake-walkthrough.md section 6
 target_compile_definitions(SimpleGain
     PUBLIC
-        JUCE_WEB_BROWSER=0          # we don't embed a browser -> don't compile one
-        JUCE_USE_CURL=0             # we make no network requests
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0)
 
-# -----------------------------------------------------------------------------
-#  Link against JUCE
-# -----------------------------------------------------------------------------
-#  "Linking" is the step where the compiler stitches separately-compiled pieces
-#  into one binary. It has no C# analogue because the CLR resolves assembly
-#  references at runtime; C++ resolves them at build time, into one file.
+# PUBLIC = also applied to the format targets that link this library, which is
+# how JUCE's docs say to use the three flag targets. Debug builds are -O0.
+# -> documentation/cmake-walkthrough.md sections 7 and 8
 target_link_libraries(SimpleGain
     PRIVATE
-        # juce_audio_utils is an umbrella module: it pulls in audio_processors,
-        # audio_basics, gui_basics, dsp and friends.
         juce::juce_audio_utils
     PUBLIC
-        # These three are not real libraries — they're bundles of compiler
-        # settings JUCE recommends (optimisation flags, warning levels,
-        # link-time optimisation). Attaching them here applies them to us.
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
+
+# Offline tests: a console app that drives the real processor with no DAW and no
+# sound card. Excluded from the default build (it compiles JUCE a second time).
+#   cmake --build build --target check
+# -> documentation/testing.md section 2, documentation/cmake-walkthrough.md section 10
+enable_testing()
+
+juce_add_console_app(SimpleGain_Tests PRODUCT_NAME "SimpleGain_Tests")
+set_target_properties(SimpleGain_Tests PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+target_sources(SimpleGain_Tests
+    PRIVATE
+        tests/main.cpp
+        tests/GainSmoothingTests.cpp
+        tests/ParameterTests.cpp
+        tests/StateTests.cpp
+        tests/CorruptStateTests.cpp
+        Source/PluginProcessor.cpp
+        Source/PluginEditor.cpp)
+
+target_include_directories(SimpleGain_Tests PRIVATE Source tests)
+
+target_compile_definitions(SimpleGain_Tests
+    PRIVATE
+        "JucePlugin_Name=\"SimpleGain\""   # normally supplied by juce_add_plugin
+        JUCE_LOG_ASSERTIONS=1                # lets the tests filter JUCE's own assertion messages
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0)
+
+target_link_libraries(SimpleGain_Tests
+    PRIVATE
+        juce::juce_audio_utils
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags)
+
+add_test(NAME SimpleGain_Tests COMMAND SimpleGain_Tests)
+
+# `cmake --build build --target check` = build the tests, then run them.
+add_custom_target(check
+    COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIG> --output-on-failure
+    DEPENDS SimpleGain_Tests
+    USES_TERMINAL)

@@ -4,8 +4,8 @@ Company name, bundle ID and manufacturer codes; `auval`; Pro Tools/AAX; and the 
 crash that killed the standalone app on first launch.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · **Identity & macOS**  
-**C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md)  
+**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · **Identity & macOS**  
+**C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
 ---
@@ -151,10 +151,13 @@ So:
 JUCE exposes these as `juce_add_plugin` options, so it's four lines in `CMakeLists.txt`:
 
 ```cmake
-MICROPHONE_PERMISSION_ENABLED   TRUE
-MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear the plugin processing live sound."
-BLUETOOTH_PERMISSION_ENABLED    TRUE
-BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
+juce_add_plugin(SimpleGain
+    MICROPHONE_PERMISSION_ENABLED   TRUE
+    MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear the plugin processing live sound."
+    BLUETOOTH_PERMISSION_ENABLED    TRUE
+    BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
+    # ... more arguments
+    )
 ```
 
 Verify it worked:

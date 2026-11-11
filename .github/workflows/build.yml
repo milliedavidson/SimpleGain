@@ -14,9 +14,9 @@ name: Build & Validate
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
 
 jobs:
   build:
@@ -47,3 +47,8 @@ jobs:
         # from CMakeLists.txt. If this fails, Logic would refuse to load the
         # plugin too — so a red X here means something genuinely broke.
         run: auval -v aufx Sgai Mxdp
+
+      - name: Run the offline tests
+        # Builds the test app (a second JUCE compile) and runs every test through CTest, with no
+        # DAW and no sound card. -> documentation/testing.md section 2
+        run: cmake --build build --target check -j 4

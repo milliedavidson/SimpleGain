@@ -1,4 +1,4 @@
-<img src="docs/banner.svg" alt="SimpleGain — a gain plugin, built from scratch while learning C++">
+<img src="documentation/images/banner.svg" alt="SimpleGain — a gain plugin, built from scratch while learning C++">
 
 <a href="#an-overview">An overview</a> | <a href="#key-features">Key features</a> | <a href="#tech-stack">Tech stack</a> | <a href="#get-started">Get started</a> | <a href="#documentation">Documentation</a> | <a href="#status">Status</a> | <a href="#built-with-claude-ai">Built with Claude AI</a> | <a href="#contributing">Contributing</a> | <a href="#license">License</a>
 
@@ -115,6 +115,18 @@ same way Logic will before it loads it:
 auval -v aufx Sgai Mxdp
 ```
 
+---
+
+**5. Run the tests**
+
+```bash
+cmake --build build --target check
+```
+
+This builds a test app that drives the real processor with no DAW and no sound card, then runs
+it. The first build compiles JUCE a second time, so it takes a few minutes; the plugin build
+doesn't touch it.
+
 <div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
 
 ---
@@ -131,13 +143,16 @@ goes deep.
 | [The plan](documentation/plan.md) | The phased build, start to finish |
 | [Hosting & threads](documentation/plugin-hosting-and-threads.md) | Why the DAW owns `main()`, the audio thread's deadline, samples vs blocks |
 | [Parameters & automation](documentation/parameters-and-automation.md) | APVTS, dB vs linear gain, skew, thread-safe parameter reads |
+| [Smoothing & the audio loop](documentation/smoothing-and-the-audio-loop.md) | Zipper noise and `SmoothedValue`, loop order, raw pointers, denormals |
+| [State: save and restore](documentation/state-save-and-restore.md) | What a host stores, `ValueTree` → XML → bytes, loading untrusted data safely |
 | [Identity & macOS](documentation/plugin-identity-and-macos.md) | Bundle IDs, 4-character codes, `auval`, privacy permissions |
 | **C++ foundations** | |
 | [Memory model](documentation/cpp-memory-model.md) | Stack vs heap, references vs pointers, RAII vs garbage collection |
 | [Build pipeline](documentation/cpp-build-pipeline.md) | Headers, preprocessor, compiling and linking, vs Roslyn and the CLR |
+| [CMake walkthrough](documentation/cmake-walkthrough.md) | `CMakeLists.txt` line by line, and why Debug builds matter for audio |
 | **Workflow** | |
 | [Dev tooling](documentation/dev-workflow-and-tooling.md) | CLion, CMake generators, Ninja, git submodules |
-| [Testing](documentation/testing.md) | How to actually get audio through it, standalone and in a DAW |
+| [Testing](documentation/testing.md) | The automated tests, and how to hear it standalone and in a DAW |
 | [CI & GitHub Actions](documentation/ci-and-github-actions.md) | What the pipeline does, and why the default template didn't work |
 
 If you have any suggestions or feedback, see [Contributing](#contributing).
@@ -157,8 +172,9 @@ built and run.
 - [x] AU validated with `auval`
 - [x] macOS microphone/Bluetooth privacy permissions (TCC) handled correctly
 - [x] An actual gain parameter (`AudioProcessorValueTreeState`), host-automatable, −60 to +30 dB
-- [ ] Sample-accurate gain smoothing (no zipper noise)
-- [ ] State save/restore
+- [x] Sample-accurate gain smoothing (no zipper noise) — biggest per-sample gain step down 960× in testing
+- [x] State save/restore — the gain survives closing and reopening a project, and corrupt data can't crash it
+- [x] Automated tests — `cmake --build build --target check`, run on every push
 - [ ] A real GUI (currently JUCE's generic editor)
 - [ ] Universal binary (Apple Silicon + Intel)
 

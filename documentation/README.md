@@ -20,6 +20,8 @@ How a plugin and a DAW actually relate, and what that forces on your design.
 | **[The plan](plan.md)** | The phased build, start to finish — what's done and what's next |
 | **[Hosting & threads](plugin-hosting-and-threads.md)** | Why the DAW owns `main()`, the audio thread's deadline, samples vs blocks, planar buffers |
 | **[Parameters & automation](parameters-and-automation.md)** | APVTS, dB vs linear gain, skew, choosing a range, thread-safe parameter reads |
+| **[Smoothing & the audio loop](smoothing-and-the-audio-loop.md)** | Zipper noise, `SmoothedValue`, loop order, raw pointers, denormals, `float` vs `double` |
+| **[State: save and restore](state-save-and-restore.md)** | What a host stores, `ValueTree` → XML → bytes, loading untrusted data safely, what's permanent |
 | **[Identity & macOS](plugin-identity-and-macos.md)** | Bundle IDs, the 4-character codes, `auval`, Pro Tools/AAX, privacy permissions |
 
 ## C++ foundations
@@ -31,6 +33,7 @@ far in a plugin without it.
 |---|---|
 | **[Memory model](cpp-memory-model.md)** | Stack vs heap, references vs pointers, `const`, RAII vs garbage collection, use-after-free |
 | **[Build pipeline](cpp-build-pipeline.md)** | Headers, the preprocessor, compiling, linking, `.o` files, and how it all differs from Roslyn and the CLR |
+| **[CMake walkthrough](cmake-walkthrough.md)** | `CMakeLists.txt` line by line — targets, PRIVATE vs PUBLIC, compile definitions, Debug vs Release |
 
 ## Workflow
 
@@ -39,7 +42,7 @@ Getting it built, tested and checked.
 | Doc | What's in it |
 |---|---|
 | **[Dev tooling](dev-workflow-and-tooling.md)** | CLion, CMake generators, Ninja, git submodules |
-| **[Testing](testing.md)** | How to actually get audio through the plugin, standalone and in a DAW |
+| **[Testing](testing.md)** | The automated tests (and how I know they can fail), plus how to hear the plugin standalone and in a DAW |
 | **[CI & GitHub Actions](ci-and-github-actions.md)** | What the pipeline does, and why the default template didn't work |
 
 ---

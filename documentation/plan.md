@@ -4,17 +4,17 @@ The phased build plan for SimpleGain, a JUCE 8 gain plugin. Concept explanations
 troubleshooting live in the sibling files below, cross-linked from wherever they came up.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** **Plan** · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Identity & macOS](plugin-identity-and-macos.md)  
-**C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md)  
+**The plugin:** **Plan** · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md)  
+**C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
 ---
 
 ## In short
 
-**Where this is up to:** Phases 0–3 are built and verified. The plugin builds as Standalone, AU
-and VST3, passes `auval`, and has a working host-automatable gain parameter. Next up is Phase 4
-— per-sample smoothing to kill the zipper noise.
+**Where this is up to:** Phases 0–5 are built and verified. The plugin builds as Standalone, AU
+and VST3, passes `auval`, has a host-automatable gain parameter that glides instead of stepping,
+saves and restores its state, and has automated tests. Next up is Phase 6 — a real GUI.
 
 - The build is **CMake + JUCE 8 as a submodule** — no Projucer.
 - **Standalone is a dev tool**, not a product; AU and VST3 are the real outputs.
@@ -59,7 +59,7 @@ We build Standalone first precisely so this can't block early progress.
 
 ## Target layout
 
-plaintext```
+```text
 /Users/millie/Documents/Programming/REPOS/Audio/SimpleGain/
 ├── CMakeLists.txt            # the build script — this replaces your .csproj/.sln
 ├── .gitignore
@@ -70,6 +70,7 @@ plaintext```
     ├── PluginProcessor.cpp   # the audio engine — implementation
     ├── PluginEditor.h        # the GUI — declaration
     └── PluginEditor.cpp      # the GUI — implementation
+```
 
 Two classes, four files. The `.h`/`.cpp` split has no C# equivalent and is the first thing
 we'll unpack.
@@ -140,6 +141,8 @@ the compile → link → binary pipeline; what "linking a library" means.
 → *background: [§4 Compile/link](cpp-build-pipeline.md#4-the-compile--link--binary-pipeline), [§2 Preprocessor](cpp-build-pipeline.md#2-what-is-the-preprocessor), [§1 Headers](cpp-build-pipeline.md#1-the-juce-headers--is-it-like-using-directives-in-c)*
 
 ### Phase 1 - Deep dive
+
+→ *The full line-by-line tour of `CMakeLists.txt` is in [CMake walkthrough](cmake-walkthrough.md).*
 
 There's no NuGet in C++. A dependency is source code you compile yourself. That's why libs/JUCE is 110 MB of actual C++ that will get compiled into your plugin.
 
@@ -336,7 +339,7 @@ The Phase 3 version works but is subtly wrong. Fix it, and explain each problem:
 
 1. **`juce::ScopedNoDenormals`** at the top of `processBlock` — denormal floats are
    near-zero values that cause massive CPU stalls on x86. A stack-guard object; pure RAII.
-2. **Clear unused output channels** — the host may hand you more outputs than inputs, and
+2. **Clear unused output channels** — the host may hand you more outputs than inputs and
    uninitialised buffers contain garbage (loud garbage).
 3. **dB → linear conversion** via `juce::Decibels::decibelsToGain` — the actual maths
    (`10^(dB/20)`) and why it's not a straight multiply.
@@ -356,6 +359,17 @@ representation; why `float` not `double` in audio.
 
 **Verification:** sweep the fader fast while audio plays — no clicks or zipper noise.
 
+**Status: built and verified.** Details, measurements and diagrams are in
+[Smoothing & the audio loop](smoothing-and-the-audio-loop.md). Where the build differs from the
+plan above:
+
+- **Pointers:** the loop fetches the whole pointer array once with `getArrayOfWritePointers()`
+  rather than calling `getWritePointer(channel)` per sample.
+- **Added an `isSmoothing()` fast path:** a steady gain is one `applyGain`, and the per-sample
+  loop only runs during the 20 ms glide.
+- **`Linear` smoothing, as planned.** JUCE's own docs recommend `Multiplicative` for values in dB;
+  the measured difference is in that doc's section on smoothing modes.
+
 ---
 
 ## Phase 5 — State save and restore
@@ -372,6 +386,17 @@ runtime, C++ genuinely cannot, so state must be described explicitly. `juce::Mem
 raw byte buffer.
 
 **Verification:** in the Standalone, set a gain, quit, relaunch, confirm the value persisted.
+
+**Status: built and tested; the by-hand check is yours.** Details, the real saved XML and the
+test findings are in [State: save and restore](state-save-and-restore.md). Where the build differs
+from the plan above:
+
+- **Written test-first, and the tests live in the repo.** Not in the plan: a `tests/` folder and a
+  `check` target (see [Testing §2](testing.md#2-automated-tests)). The Phase 5 tests were run
+  against the empty stubs first (60 pass, 10 fail), then the implementation made them green.
+- **The tag is compared exactly**, rather than with JUCE's `hasTagName()`, which ignores case.
+- **Still needs a human:** the Standalone check above, and saving then reopening a project in a
+  real DAW.
 
 ---
 

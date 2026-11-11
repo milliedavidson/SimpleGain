@@ -73,7 +73,8 @@ public:
     bool hasEditor() const override;
 
     //==========================================================================
-    // Save / restore — implemented in Phase 5
+    // Save / restore: what the host stores in the project file.
+    // -> documentation/state-save-and-restore.md section 1
 
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
@@ -129,6 +130,15 @@ private:
         -> documentation/parameters-and-automation.md section 4
     */
     std::atomic<float>* gainDbParameter = nullptr;
+
+    /** The gain actually applied, in linear units. It glides to the fader's value
+        over gainRampSeconds instead of jumping there, which is what removes
+        zipper noise.
+        -> documentation/smoothing-and-the-audio-loop.md section 2 */
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedGain;
+
+    /** `constexpr` = known at compile time, like C#'s `const`. */
+    static constexpr double gainRampSeconds = 0.02;
 
     // Macro: deletes the copy constructor (every C++ class is copyable by
     // default — for an audio processor that would be a disaster) and adds a

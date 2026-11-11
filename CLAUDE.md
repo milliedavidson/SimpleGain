@@ -30,11 +30,12 @@ is an experienced C# developer new to C++, so the code is explained — but ther
 
 - **Code comments: 1–3 lines.** What it does, plus the single non-obvious *why*. If a comment
   is growing past ~3 lines, that's the signal it belongs in a doc instead.
-- **Point at the doc** when there's more to say, on its own line:
+- **Point at the doc** when there's more to say, on its own line, in exactly this form (it's
+  machine-checkable, so don't vary it):
   ```cpp
   // Cached so processBlock never does a string lookup, and atomic because the
   // GUI thread writes it while the audio thread reads it.
-  // → documentation/parameters-and-automation.md §3
+  // -> documentation/parameters-and-automation.md section 4
   ```
 - **The docs carry the full reasoning** — C# comparisons, diagrams, the history of why a
   decision was made.
@@ -42,26 +43,100 @@ is an experienced C# developer new to C++, so the code is explained — but ther
 The reason for the split: at one point `PluginProcessor.cpp` was 55% comments, and the code
 became hard to read *because* of the explanations. Prose and code have different jobs.
 
+### `processBlock` is real-time — keep it that way
+
+`processBlock` runs roughly 100 times a second (94 at a 512-sample block) against a hard
+deadline of a few milliseconds, and missing it is an audible click. So in `processBlock`, and in anything it calls, **never**:
+
+- allocate: `new`, growing a `std::vector`, building a `juce::String`
+- take a lock: `std::mutex`, `juce::CriticalSection`
+- do file or network I/O, or log (`DBG()`, `std::cout`) — a log line can cause the very glitch
+  it was added to find
+- look a parameter up by string
+
+Instead: allocate in `prepareToPlay`; read parameters through the cached `std::atomic<float>*`;
+ramp values with `juce::SmoothedValue`; hand data to the GUI through atomics or a lock-free
+structure, never a mutex the audio thread might wait on. If you aren't sure something is
+real-time safe, assume it isn't and ask.
+
+Why, in full: [Hosting & threads](documentation/plugin-hosting-and-threads.md) (the sections on
+threads and blocking).
+
+### Some things are permanent once released
+
+Hosts and users store these, so changing them later silently breaks saved projects, recorded
+automation or plugin recognition. **Don't change any of them — even to tidy — without asking
+first:**
+
+- **Identity:** `COMPANY_NAME`, `BUNDLE_ID`, `PLUGIN_MANUFACTURER_CODE`, `PLUGIN_CODE`
+- **Parameter IDs:** the `"gain"` string and its version hint in `juce::ParameterID`
+- **Parameter ranges:** hosts store automation as a *normalised* 0–1 value, so widening or
+  narrowing a range shifts every recorded automation lane. (The plugin's own saved state holds
+  the real dB value, so a fader position survives — automation doesn't.)
+- **`JUCE_VST3_CAN_REPLACE_VST2`:** JUCE warns that changing it makes the VST3 incompatible with
+  previous versions.
+
+These are locked by tests (`tests/ParameterTests.cpp` and the saved-format tests in
+`tests/StateTests.cpp`). **If one of those fails, a permanent thing has changed — don't "fix" the
+test to match; stop and ask.**
+
+Nothing has been released yet, so these *can* still change — which is exactly the moment to ask,
+not afterwards. Detail: [Identity & macOS](documentation/plugin-identity-and-macos.md),
+[Parameters & automation](documentation/parameters-and-automation.md) (the section on choosing
+a range), [CMake walkthrough](documentation/cmake-walkthrough.md).
+
+### Keep the docs in step with the code
+
+When a change alters something a doc states — a range, an identity value, a phase's status, a
+section or file name — update the doc, the **Status** list in `README.md`, and the "In short" in
+`documentation/plan.md` **in the same change**. These have all gone stale before.
+
+Before calling docs work done, run the checker — it must exit 0:
+
+```bash
+python3 scripts/check-docs.py
+```
+
+It checks that every link and `#anchor` resolves, every referenced image exists (and none is
+orphaned), every `documentation/<file>.md section N` pointer in `Source/` and `CMakeLists.txt`
+names a section that really exists, `documentation/README.md` lists every doc, every doc has an
+"In short" block and a nav line linking the others, code fences are well-formed and every
+cmake code block is valid CMake (an argument fragment on its own isn't — wrap it in its command,
+because CLion flags those as errors). Never
+hand-guess an anchor — GitHub turns each space into its own hyphen, so an em dash between two
+spaced words gives a **double** hyphen. If you find a new way docs can break, add a check to the
+script rather than a sentence here.
+
 ## Structure
 
 ```
 CMakeLists.txt              the build script
 libs/JUCE/                  JUCE 8, as a git submodule — not committed source
 Source/                     the plugin: PluginProcessor.{h,cpp}, PluginEditor.{h,cpp}
+tests/                      the offline tests — `cmake --build build --target check`
 .github/workflows/build.yml CI — builds all 3 formats, validates the AU with auval
+scripts/check-docs.py         verifies the docs hang together — see "Keep the docs in step"
 documentation/              the reasoning behind the code — see documentation/README.md
-docs/banner.svg             README hero image
+documentation/images/banner.svg   README hero image
 ```
 
 ## Verifying changes
 
+- **Run the tests after any change to `Source/`:** `cmake --build build --target check`. Every
+  test must pass. A change in behaviour needs a test — write it *first*, watch it fail, then make
+  it pass. The first build compiles JUCE a second time (a few minutes); after that it's quick.
+  How the tests work, and how to add one: `documentation/testing.md`.
 - Rebuild and actually run before calling something done:
   `cmake --build build --target SimpleGain_Standalone -j 8`, then open the `.app`.
-- Any change to plugin identity (`COMPANY_NAME`, `PLUGIN_CODE`, `PLUGIN_MANUFACTURER_CODE`,
-  `BUNDLE_ID`) needs re-validating: `auval -v aufx <code> <manufacturer>`.
+- After **any** change to `Source/` or `CMakeLists.txt` — not just identity — rebuild all three
+  formats and run `auval -v aufx Sgai Mxdp`. CI runs it too, but check locally first.
+- Judging glitches or CPU use? Build **Release**: Debug is `-O0` with no LTO, and
+  `COPY_PLUGIN_AFTER_BUILD` installs whichever you built last. See the Debug-vs-Release section
+  of the [CMake walkthrough](documentation/cmake-walkthrough.md).
 - Check facts against the installed source rather than memory — `libs/JUCE/docs/` and the
   module headers under `libs/JUCE/modules/` are the ground truth for JUCE's API in this exact
-  version, which can differ from older tutorials.
+  version. Memory has been stale here before: JUCE 8 split `juce_audio_processors` into a
+  `_headless` module, and GitHub deprecated the `macos-14` runner.
 
 ## Related
 
