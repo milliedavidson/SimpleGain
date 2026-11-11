@@ -4,7 +4,7 @@ How a knob the user turns becomes a number the audio thread can safely read — 
 learns what that number means.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · **Parameters & automation** · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md)  
+**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · **Parameters & automation** · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 

@@ -172,11 +172,10 @@ bool SimpleGainAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* SimpleGainAudioProcessor::createEditor()
 {
-    // TEMPORARY: JUCE generates a working slider per parameter, so the gain is
-    // audible before any interface code exists. Our own editor lands in Phase 6.
-    //
-    // Bare `new` is correct here — the host takes ownership and deletes it.
-    return new juce::GenericAudioProcessorEditor (*this);
+    // A factory: the host calls this each time the window opens, and deletes
+    // the result when it closes. Bare `new` is correct here because the host
+    // takes ownership. -> documentation/editor-gui.md section 9
+    return new SimpleGainAudioProcessorEditor (*this);
 }
 
 

@@ -4,7 +4,7 @@ The phased build plan for SimpleGain, a JUCE 8 gain plugin. Concept explanations
 troubleshooting live in the sibling files below, cross-linked from wherever they came up.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** **Plan** · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md)  
+**The plugin:** **Plan** · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
@@ -12,9 +12,10 @@ troubleshooting live in the sibling files below, cross-linked from wherever they
 
 ## In short
 
-**Where this is up to:** Phases 0–5 are built and verified. The plugin builds as Standalone, AU
+**Where this is up to:** Phases 0–6 are built and verified. The plugin builds as Standalone, AU
 and VST3, passes `auval`, has a host-automatable gain parameter that glides instead of stepping,
-saves and restores its state, and has automated tests. Next up is Phase 6 — a real GUI.
+saves and restores its state, has its own resizable editor, and has automated tests. Next up is
+Phase 7 — build all formats, validate, and load in a DAW.
 
 - The build is **CMake + JUCE 8 as a submodule** — no Projucer.
 - **Standalone is a dev tool**, not a product; AU and VST3 are the real outputs.
@@ -418,6 +419,20 @@ construction — the attachment must be declared *after* the slider or it dangle
 editor holds a reference to the processor rather than owning it; the message thread again.
 
 **Verification:** knob turns, audio responds, value box is editable, window resizes cleanly.
+
+**Status: built and tested; the by-hand check is yours.** Details, pictures and the test table are in
+[The editor (GUI)](editor-gui.md). Where the build differs from the plan above:
+
+- **Written test-first**, with 10 tests that need no screen (8 passed and 10 failed against the old
+  generic editor, then all green). Ten deliberate breakages of the editor were all caught.
+- **The editor keeps no reference to the processor.** The base class already holds one, so a second
+  copy would be redundant. The processor is passed in by reference and only used to build the attachment.
+- **A snapshot mode** was added: `SimpleGain_Tests --snapshots <folder>` renders the editor to PNG
+  files, which is how the pictures in the docs are made and how the layout was checked by eye.
+- **Known gap:** the value text doesn't scale with the window (see
+  [The editor §8](editor-gui.md#8-making-the-window-resizable)).
+- **Still needs a human:** open the Standalone, turn the knob, type a value, double-click to reset,
+  drag the corner to resize, and check in a DAW that automation moves the knob.
 
 ---
 

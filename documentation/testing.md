@@ -4,7 +4,7 @@ How to feed audio through the plugin and hear what it's doing — standalone and
 and how the automated tests check the numbers behind it.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md)  
+**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · **Testing** · [CI & GitHub Actions](ci-and-github-actions.md)
 
@@ -108,7 +108,7 @@ it on every push.
 
 ### What's covered
 
-24 tests in four groups, about 1,350 individual checks:
+34 tests in five groups, about 1,460 individual checks:
 
 | File | Group | What it protects |
 |---|---|---|
@@ -116,6 +116,7 @@ it on every push.
 | `ParameterTests.cpp` | Parameters | The permanent things: the `"gain"` id and its version hint, the −60…+30 dB range, the default, the display text, the accepted channel layouts. |
 | `StateTests.cpp` | State save and restore | The round trip, applying from the first sample, loading during playback, wrong or unexpected documents, the saved format. See [State: save and restore](state-save-and-restore.md). |
 | `CorruptStateTests.cpp` | Corrupt state data | Empty, random, truncated and corrupted data fed to the loader: it must never crash. Its own group so it can be run alone, for example under a memory checker. |
+| `EditorTests.cpp` | Editor | The GUI, with no screen: the knob follows the parameter *and* the parameter follows the knob, layout at every window size, it really draws, opening and closing 50 times. See [The editor (GUI) §10](editor-gui.md#10-testing-a-gui-with-no-screen). |
 
 **If a test in `ParameterTests` or the format tests in `StateTests` fails, a permanent thing has
 changed** — an id, a range, the saved format. Stop and think before "fixing" the test: it's
@@ -161,13 +162,29 @@ deliberately broken copies of the plugin and ran these same tests against each o
 | tag compared case-insensitively | hasTagName instead of an exact compare | **caught** | State save and restore ×1 |
 | unreadable data not checked for | dereference without the null check | **caught** | the test app crashed (after 2 failing) |
 | saves without flushing (state.createXml) | skip copyState(), read the tree directly | **caught** | State save and restore ×4 |
+| attachment declared before the slider | swap two member lines in the editor | **caught** | the test app crashed |
+| no attachment | knob and parameter not connected | **caught** | Editor ×6 |
+| generic editor again | createEditor returns JUCE's GenericAudioProcessorEditor | **caught** | Editor ×1 |
+| no resize limits | setResizeLimits removed | **caught** | Editor ×1 |
+| no fixed aspect ratio | setFixedAspectRatio removed | **caught** | Editor ×1 |
+| knob bigger than the window | knob bounds expanded | **caught** | Editor ×2 |
+| knob far too small | knob bounds shrunk | **caught** | Editor ×1 |
+| flat background | no gradient | **caught** | Editor ×1 |
+| knob added but hidden | addChildComponent instead of addAndMakeVisible | **caught** | Editor ×1 |
+| knob loses its ID | no setComponentID | **caught** | Editor ×8 |
 | denormal guard removed | no ScopedNoDenormals | survived | — |
 | unused output channels not cleared | drop the clear() loop | survived | — |
 
-**17 of 19 were caught.** Alongside them I ran the unmodified plugin through the same tests: it
+**27 of 29 were caught.** Alongside them I ran the unmodified plugin through the same tests: it
 passes every one, which is the control. Without a control, a failure could just mean the harness is
 broken. (Mine briefly was: an early run reported the *unmodified* plugin failing, because the build
 was reusing a stale binary from the previous variant. The harness now stops if its control fails.)
+
+The ten editor rows were added in Phase 6, and the first round found a real gap: with the knob
+added to the window but *hidden*, the "it draws" test still passed, because the background gradient
+alone makes the middle of the window differ from a corner. The test now compares the picture with
+the knob shown against the same window with it hidden, and that mutant is caught. (One of my first
+mutants didn't even compile, so it proved nothing; I fixed the edit and ran it again.)
 
 This was a one-off check, with the harness kept outside the repo: it copies the plugin source,
 applies one deliberate break, rebuilds just those files, and runs the real tests against the result.
@@ -205,7 +222,7 @@ Floats need care: the build's strict warning flags include `-Wfloat-equal`, so c
 
 ### What they can't tell you
 
-They don't test the GUI, how a particular DAW behaves, changes of sample rate in the middle of
+They test the GUI's *behaviour* and layout, not whether it looks or feels good (there's a snapshot mode for looking: see [The editor (GUI) §10](editor-gui.md#10-testing-a-gui-with-no-screen)). They don't test how a particular DAW behaves, changes of sample rate in the middle of
 playback, or what anything sounds like. `auval` and a listen in a real DAW still matter, and the
 [checklist in §1](#1-how-do-you-actually-test-a-gain-plugin-standalone) is still the way to hear
 it.

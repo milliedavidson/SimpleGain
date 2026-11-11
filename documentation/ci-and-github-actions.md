@@ -5,7 +5,7 @@ What a pipeline actually is, what went wrong with GitHub's default C/C++ templat
 on every push.
 
 **SimpleGain docs** · [Index](README.md)  
-**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md)  
+**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · **CI & GitHub Actions**
 
@@ -85,7 +85,7 @@ jobs:
 
     steps:
       - name: Check out SimpleGain (with the JUCE submodule)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -126,6 +126,13 @@ Three details worth calling out:
   than assume: `macos-latest` currently means **Apple Silicon (arm64)**, and `macos-14` (the
   Intel-era default many older examples still show) is already **deprecated**. If an Intel
   runner is ever needed specifically, the current label for that is `macos-15-intel`.
+- **`actions/checkout@v7`** — each action is a small program that runs on a Node.js runtime, and
+  the `@v7` is its version. The first version of this workflow used `@v4`, which runs on Node 20;
+  GitHub deprecated Node 20 and warned *"actions/checkout@v4 … forced to run on Node.js 24"*.
+  Nothing broke, but the fix is to move to a version built for Node 24, which `v5` onwards are
+  (checked in the action's own `action.yml`: `using: node24`). The `submodules` input we depend on
+  is unchanged. Expect to do this again every few years: it's the same chore as bumping a NuGet
+  package when its target framework goes out of support.
 
 ---
 

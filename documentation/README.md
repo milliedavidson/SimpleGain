@@ -23,6 +23,7 @@ How a plugin and a DAW actually relate, and what that forces on your design.
 | **[Smoothing & the audio loop](smoothing-and-the-audio-loop.md)** | Zipper noise, `SmoothedValue`, loop order, raw pointers, denormals, `float` vs `double` |
 | **[State: save and restore](state-save-and-restore.md)** | What a host stores, `ValueTree` → XML → bytes, loading untrusted data safely, what's permanent |
 | **[Identity & macOS](plugin-identity-and-macos.md)** | Bundle IDs, the 4-character codes, `auval`, Pro Tools/AAX, privacy permissions |
+| **[The editor (GUI)](editor-gui.md)** | Components, the two-way `SliderAttachment`, member order, layout, resizing, testing a GUI with no screen |
 
 ## C++ foundations
 

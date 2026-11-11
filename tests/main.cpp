@@ -5,6 +5,7 @@
 //  registers it with JUCE, so there's no list to maintain here.
 // =============================================================================
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "EditorSnapshots.h"
 
 #include <iostream>
 
@@ -21,6 +22,10 @@ int main (int argc, char** argv)
 {
     // The processor builds parameter trees and listeners that expect JUCE to be running.
     juce::ScopedJuceInitialiser_GUI initialiser;
+
+    // SimpleGain_Tests --snapshots <folder>  draws the editor to PNG files instead of running tests.
+    if (argc > 2 && juce::String (argv[1]) == "--snapshots")
+        return writeEditorSnapshots (juce::File::getCurrentWorkingDirectory().getChildFile (argv[2])) ? 0 : 1;
 
     ConsoleRunner runner;
 

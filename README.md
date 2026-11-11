@@ -146,6 +146,7 @@ goes deep.
 | [Smoothing & the audio loop](documentation/smoothing-and-the-audio-loop.md) | Zipper noise and `SmoothedValue`, loop order, raw pointers, denormals |
 | [State: save and restore](documentation/state-save-and-restore.md) | What a host stores, `ValueTree` → XML → bytes, loading untrusted data safely |
 | [Identity & macOS](documentation/plugin-identity-and-macos.md) | Bundle IDs, 4-character codes, `auval`, privacy permissions |
+| [The editor (GUI)](documentation/editor-gui.md) | Components, the two-way `SliderAttachment`, member order, layout, testing a GUI with no screen |
 | **C++ foundations** | |
 | [Memory model](documentation/cpp-memory-model.md) | Stack vs heap, references vs pointers, RAII vs garbage collection |
 | [Build pipeline](documentation/cpp-build-pipeline.md) | Headers, preprocessor, compiling and linking, vs Roslyn and the CLR |
@@ -175,7 +176,7 @@ built and run.
 - [x] Sample-accurate gain smoothing (no zipper noise) — biggest per-sample gain step down 960× in testing
 - [x] State save/restore — the gain survives closing and reopening a project, and corrupt data can't crash it
 - [x] Automated tests — `cmake --build build --target check`, run on every push
-- [ ] A real GUI (currently JUCE's generic editor)
+- [x] A real GUI — a resizable knob editor, two-way bound to the parameter, tested without a screen
 - [ ] Universal binary (Apple Silicon + Intel)
 
 <div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>

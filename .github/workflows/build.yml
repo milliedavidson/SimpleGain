@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Check out SimpleGain (with the JUCE submodule)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # JUCE is a git submodule, not committed code. Without this, the
           # checkout leaves libs/JUCE empty and CMake fails with a confusing

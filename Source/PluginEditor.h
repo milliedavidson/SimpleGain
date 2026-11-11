@@ -1,13 +1,11 @@
 // =============================================================================
-//  PluginEditor.h  —  the DECLARATION of our GUI
-// =============================================================================
-//  Key idea: the editor is SEPARATE from the processor and OPTIONAL.
-//  A DAW can load, run and render your plugin with the window closed — or
-//  never opened at all. So the GUI must never own anything the audio needs.
+//  PluginEditor.h — the plugin window
 //
-//  The editor lives on the MESSAGE THREAD (the UI thread). The processor's
-//  processBlock lives on the AUDIO THREAD. Keeping those apart is the central
-//  design constraint of the whole plugin.
+//  The editor is separate from the processor, and optional: a host can run the
+//  plugin with the window closed, and opens and closes it many times. It lives
+//  on the MESSAGE thread; processBlock lives on the audio thread.
+//
+//  Comments are short on purpose — the reasoning lives in documentation/.
 // =============================================================================
 
 #pragma once
@@ -18,56 +16,37 @@
 
 //==============================================================================
 /**
-    Our plugin window.
+    The window: a title, a gain knob and its value box.
 
-    It inherits from juce::AudioProcessorEditor, which itself inherits from
-    juce::Component — JUCE's base class for anything drawable. Component is
-    roughly the equivalent of a WPF UIElement or a WinForms Control.
+    juce::AudioProcessorEditor is a juce::Component, JUCE's base class for
+    anything drawable — roughly WPF's UIElement or WinForms' Control.
+    -> documentation/editor-gui.md sections 1 and 2
 */
 class SimpleGainAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
-    /** The constructor takes a REFERENCE to the processor that created us.
-
-        A reference (`&`), not a pointer (`*`), and not a copy. This says three
-        things at once:
-          - we can reach the processor to read/write its state
-          - we do NOT own it (it outlives us — it created us)
-          - it can never be null (references always refer to something)
-
-        That last point is a real advantage over C#, where any reference
-        parameter might be null unless you've enabled nullable reference types.
-    */
+    /** Takes the processor by REFERENCE: it can't be null, and we don't own it
+        (it outlives every editor it creates). `explicit` stops C++ quietly
+        converting a processor into an editor. */
     explicit SimpleGainAudioProcessorEditor (SimpleGainAudioProcessor&);
-
-    // `explicit` blocks accidental implicit conversion. Without it, C++ would
-    // happily convert a SimpleGainAudioProcessor into an editor anywhere one
-    // was expected. C# never does implicit conversions like this, so the
-    // keyword has no C# counterpart — but in C++ it's good hygiene on any
-    // single-argument constructor.
 
     ~SimpleGainAudioProcessorEditor() override;
 
-    //==========================================================================
-    /** Draw the component. JUCE calls this whenever the window needs
-        repainting — same idea as WPF's OnRender or WinForms' OnPaint.
-        You never call it yourself; you call repaint() to request it. */
+    /** JUCE calls this when the window needs drawing. We never call it ourselves. */
     void paint (juce::Graphics&) override;
 
-    /** Called whenever this component changes size. Position your child
-        components here. This is JUCE's layout pass. */
+    /** JUCE calls this whenever the size changes: position the children here. */
     void resized() override;
 
 private:
     //==========================================================================
-    /** A reference back to the processor that owns us.
-
-        `&` again: a member reference. It must be bound in the constructor's
-        initializer list and can never be reseated afterwards. That's stricter
-        than a C# field holding an object, and deliberately so — it encodes
-        "this editor belongs to exactly this processor, for life".
-    */
-    SimpleGainAudioProcessor& processorRef;
+    // ORDER MATTERS. Members are constructed top to bottom and destroyed bottom
+    // to top, and the attachment's destructor touches the slider — so the
+    // attachment must be declared AFTER the slider, to be destroyed before it.
+    // -> documentation/editor-gui.md section 5
+    juce::Label titleLabel;
+    juce::Slider gainSlider;
+    juce::AudioProcessorValueTreeState::SliderAttachment gainAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleGainAudioProcessorEditor)
 };

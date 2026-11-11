@@ -94,6 +94,8 @@ target_sources(SimpleGain_Tests
         tests/ParameterTests.cpp
         tests/StateTests.cpp
         tests/CorruptStateTests.cpp
+        tests/EditorTests.cpp
+        tests/EditorSnapshots.cpp
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp)
 
