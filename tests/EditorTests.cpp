@@ -24,6 +24,21 @@ namespace
         return dynamic_cast<juce::Slider*> (editor.findChildWithID ("gainSlider"));
     }
 
+    /** The label inside the knob that shows the value, and the font JUCE will actually draw it with. */
+    juce::Label* findValueLabel (juce::Slider& knob)
+    {
+        for (auto* child : knob.getChildren())
+            if (auto* label = dynamic_cast<juce::Label*> (child))
+                return label;
+
+        return nullptr;
+    }
+
+    float valueTextHeight (juce::Label& label)
+    {
+        return label.getLookAndFeel().getLabelFont (label).getHeight();
+    }
+
     struct EditorTests final : public juce::UnitTest
     {
         EditorTests() : juce::UnitTest ("Editor", "SimpleGain") {}
@@ -38,6 +53,7 @@ namespace
             textBox();
             rangeAndReset();
             layoutAtEverySize();
+            valueTextScales();
             drawsSomething();
             openingAndClosing();
         }
@@ -188,6 +204,37 @@ namespace
                 for (auto* child : editor.getChildren())
                     expect (editor.getLocalBounds().contains (child->getBounds()), "a child sticks out at " + label);
             }
+        }
+
+        void valueTextScales()
+        {
+            beginTest ("The value text grows and shrinks with the window, and always fits its box");
+
+            SimpleGainAudioProcessor processor;
+            SimpleGainAudioProcessorEditor editor (processor);
+            auto* knob = findKnob (editor);
+            auto* label = knob != nullptr ? findValueLabel (*knob) : nullptr;
+            const auto* constrainer = editor.getConstrainer();
+            if (label == nullptr || constrainer == nullptr)
+                return expect (false, "no value label or no constrainer");
+
+            editor.setSize (constrainer->getMinimumWidth(), constrainer->getMinimumHeight());
+            const auto smallest = valueTextHeight (*label);
+            expectLessOrEqual (smallest, static_cast<float> (label->getHeight()), "text taller than its box at the smallest size");
+
+            editor.setSize (constrainer->getMaximumWidth(), constrainer->getMaximumHeight());
+            const auto largest = valueTextHeight (*label);
+            expectLessOrEqual (largest, static_cast<float> (label->getHeight()), "text taller than its box at the largest size");
+
+            // The window is 2.67x taller at its largest than at its smallest, so the text should grow by about that much.
+            expectGreaterThan (largest, smallest * 2.0f, "the value text doesn't scale with the window");
+
+            // The look-and-feel is only meant for the knob's value box: the title keeps the font it was given.
+            if (auto* title = dynamic_cast<juce::Label*> (editor.getChildComponent (0)))
+                expectWithinAbsoluteError (valueTextHeight (*title), title->getFont().getHeight(), 0.01f,
+                                           "the title's font was changed by the look-and-feel");
+            else
+                expect (false, "the editor's first child isn't the title label");
         }
 
         void drawsSomething()

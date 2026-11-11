@@ -16,6 +16,20 @@
 
 //==============================================================================
 /**
+    A LookAndFeel is JUCE's "theme": one object that decides how widgets draw
+    themselves. Ours changes one thing — the value text in the knob's box scales
+    with the box, instead of staying at a fixed size.
+    -> documentation/editor-gui.md section 9
+*/
+class SimpleGainLookAndFeel final : public juce::LookAndFeel_V4
+{
+public:
+    juce::Font getLabelFont (juce::Label&) override;
+};
+
+
+//==============================================================================
+/**
     The window: a title, a gain knob and its value box.
 
     juce::AudioProcessorEditor is a juce::Component, JUCE's base class for
@@ -41,9 +55,10 @@ public:
 private:
     //==========================================================================
     // ORDER MATTERS. Members are constructed top to bottom and destroyed bottom
-    // to top, and the attachment's destructor touches the slider — so the
-    // attachment must be declared AFTER the slider, to be destroyed before it.
+    // to top: the look-and-feel must outlive the widgets that use it (so it is
+    // first), and the attachment's destructor touches the slider (so it is last).
     // -> documentation/editor-gui.md section 5
+    SimpleGainLookAndFeel lookAndFeel;
     juce::Label titleLabel;
     juce::Slider gainSlider;
     juce::AudioProcessorValueTreeState::SliderAttachment gainAttachment;

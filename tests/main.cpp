@@ -11,6 +11,22 @@
 
 namespace
 {
+    /** JUCE reports a debug assertion (a broken rule inside JUCE or our code) by logging it, which on its
+        own fails nothing. This counts them so the run can fail: a use-after-free or a widget deleted while
+        still in use shows up here even when every check passes. */
+    struct AssertionCounter final : public juce::Logger
+    {
+        int count = 0;
+
+        void logMessage (const juce::String& message) override
+        {
+            if (message.startsWith ("JUCE Assertion failure"))
+                ++count;
+
+            std::cout << message << std::endl;
+        }
+    };
+
     /** JUCE's runner logs through its own Logger; send it to the terminal so ctest and CI show it. */
     struct ConsoleRunner final : public juce::UnitTestRunner
     {
@@ -26,6 +42,9 @@ int main (int argc, char** argv)
     // SimpleGain_Tests --snapshots <folder>  draws the editor to PNG files instead of running tests.
     if (argc > 2 && juce::String (argv[1]) == "--snapshots")
         return writeEditorSnapshots (juce::File::getCurrentWorkingDirectory().getChildFile (argv[2])) ? 0 : 1;
+
+    AssertionCounter assertions;
+    juce::Logger::setCurrentLogger (&assertions);
 
     ConsoleRunner runner;
 
@@ -43,8 +62,11 @@ int main (int argc, char** argv)
         failures += runner.getResult (i)->failures;
     }
 
-    std::cout << "\n" << passes << " checks passed, " << failures << " failed" << std::endl;
+    juce::Logger::setCurrentLogger (nullptr);
+
+    std::cout << "\n" << passes << " checks passed, " << failures << " failed, "
+              << assertions.count << " JUCE assertions" << std::endl;
 
     // No results at all would mean the tests silently didn't register — treat that as a failure too.
-    return (failures == 0 && passes > 0) ? 0 : 1;
+    return (failures == 0 && passes > 0 && assertions.count == 0) ? 0 : 1;
 }

@@ -22,12 +22,26 @@ namespace
 
 
 //==============================================================================
+juce::Font SimpleGainLookAndFeel::getLabelFont (juce::Label& label)
+{
+    // Only the knob's value box: half the box's height, so it scales and always fits.
+    // -> documentation/editor-gui.md section 9
+    if (dynamic_cast<juce::Slider*> (label.getParentComponent()) != nullptr)
+        return juce::FontOptions (static_cast<float> (label.getHeight()) * 0.5f);
+
+    return LookAndFeel_V4::getLabelFont (label);
+}
+
+
+//==============================================================================
 SimpleGainAudioProcessorEditor::SimpleGainAudioProcessorEditor (SimpleGainAudioProcessor& p)
     : AudioProcessorEditor (&p),      // the base class wants a POINTER, so we pass &p
       // The slider is declared above this, so it already exists: safe to connect.
       // -> documentation/editor-gui.md section 4
       gainAttachment (p.apvts, "gain", gainSlider)
 {
+    setLookAndFeel (&lookAndFeel);      // must be undone in the destructor
+
     titleLabel.setText ("SimpleGain", juce::dontSendNotification);
     titleLabel.setJustificationType (juce::Justification::centred);
     titleLabel.setColour (juce::Label::textColourId, textLight);
@@ -56,7 +70,10 @@ SimpleGainAudioProcessorEditor::SimpleGainAudioProcessorEditor (SimpleGainAudioP
     setSize (defaultWidth, defaultHeight);
 }
 
-SimpleGainAudioProcessorEditor::~SimpleGainAudioProcessorEditor() = default;
+SimpleGainAudioProcessorEditor::~SimpleGainAudioProcessorEditor()
+{
+    setLookAndFeel (nullptr);           // children are still alive, so detach before they go
+}
 
 
 //==============================================================================
