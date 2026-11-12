@@ -138,7 +138,7 @@ in spirit to C#'s explicit `using` directives than a catch-all header.
 
 **C++ vs C# concepts introduced:** CMake as the `.csproj`/`.sln` equivalent, but *generating* a
 build rather than being one. There is no NuGet: dependencies are source you compile yourself.
-Also the compile → link → binary pipeline, and what "linking a library" means.
+Also, the compile → link → binary pipeline, and what "linking a library" means.
 → *background: [§4 Compile/link](cpp-build-pipeline.md#4-the-compile--link--binary-pipeline), [§2 Preprocessor](cpp-build-pipeline.md#2-what-is-the-preprocessor), [§1 Headers](cpp-build-pipeline.md#1-the-juce-headers--is-it-like-using-directives-in-c)*
 
 ### Phase 1 - Deep dive
@@ -415,7 +415,7 @@ Replace `GenericAudioProcessorEditor` with a hand-built editor.
 - `setSize()`, and making the window resizable with sensible constraints
 
 **C++ vs C# concepts introduced:** member declaration order matters. Destruction is the reverse of
-construction, so the attachment must be declared *after* the slider or it dangles. Also why the
+construction, so the attachment must be declared *after* the slider or, it dangles. Also why the
 editor holds a reference to the processor rather than owning it, and the message thread again.
 
 **Verification:** knob turns, audio responds, value box is editable, window resizes cleanly.
