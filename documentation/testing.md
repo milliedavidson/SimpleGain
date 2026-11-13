@@ -108,7 +108,7 @@ it on every push.
 
 ### What's covered
 
-35 tests in five groups, about 1,460 individual checks:
+40 tests in six groups, about 1,490 individual checks:
 
 | File                     | Group                  | What it protects                                                                                                                                                                                                                                                   |
 |--------------------------|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -116,7 +116,8 @@ it on every push.
 | `ParameterTests.cpp`     | Parameters             | The permanent things: the `"gain"` id and its version hint, the −60…+30 dB range, the default, the display text, the accepted channel layouts.                                                                                                                     |
 | `StateTests.cpp`         | State save and restore | The round trip, applying from the first sample, loading during playback, wrong or unexpected documents, the saved format. See [State: save and restore](state-save-and-restore.md).                                                                                |
 | `CorruptStateTests.cpp`  | Corrupt state data     | Empty, random, truncated and corrupted data fed to the loader: it must never crash. Its own group so it can be run alone, for example under a memory checker.                                                                                                      |
-| `EditorTests.cpp`        | Editor                 | The GUI, with no screen: the knob follows the parameter *and* the parameter follows the knob, layout and text size at every window size, it really draws, opening and closing 50 times. See [The editor (GUI) §11](editor-gui.md#11-testing-a-gui-with-no-screen). |
+| `EditorTests.cpp`        | Editor                 | The GUI, with no screen: the knob follows the parameter *and* the parameter follows the knob, layout and text size at every window size, it really draws, opening and closing 50 times. See [The editor (GUI) §12](editor-gui.md#12-testing-a-gui-with-no-screen). |
+| `KnobDragTests.cpp`      | Knob dragging          | Fake mouse drags: the knob follows the pointer round its arc, a click never moves the gain, it stops at both ends, and a drag is one gesture to the host. See [The editor (GUI) §10](editor-gui.md#10-turning-the-knob-following-the-pointer-without-jumping).     |
 
 **If a test in `ParameterTests` or the format tests in `StateTests` fails, a permanent thing has
 changed** — an id, a range, the saved format. Stop and think before "fixing" the test: it's
@@ -180,12 +181,12 @@ deliberately broken copies of the plugin and ran these same tests against each o
 | denormal guard removed                   | no ScopedNoDenormals                                      | survived   | —                                                           |
 | unused output channels not cleared       | drop the clear() loop                                     | survived   | —                                                           |
 
-**32 of 34 were caught** (plus one change that turned out to leave the program just as correct, explained below). Alongside them I ran the unmodified plugin through the same tests: it
+**39 of 41 were caught** (plus one change that turned out to leave the program just as correct, explained below). Alongside them, I ran the unmodified plugin through the same tests: it
 passes every one, which is the control. Without a control, a failure could just mean the harness is
 broken. (Mine briefly was: an early run reported the *unmodified* plugin failing, because the build
 was reusing a stale binary from the previous variant. The harness now stops if its control fails.)
 
-The fifteen editor rows were added in Phase 6, and the first round found a real gap. With the knob
+The twenty-two editor and knob rows were added in Phase 6, and the first round found a real gap. With the knob
 added to the window but *hidden*, the "it draws" test still passed, because the background gradient
 alone makes the middle of the window differ from a corner. The test now compares the picture with
 the knob shown against the same window with it hidden, and that mutant is caught. (One of my first
@@ -208,6 +209,20 @@ The survivors are real gaps, and worth knowing about:
 - **Clearing unused output channels** can be removed too. With the layouts the plugin accepts,
   inputs always match outputs, so that loop never has anything to clear: it's defensive code the
   tests can't reach.
+
+**A flaky test that was really a memory bug.** After the knob work, about one full run in four
+crashed inside the "value text scales" test. The crash report pointed at a font read through a
+freed `Label`. The test had kept a pointer to the knob's value label, then resized the window, and
+resizing makes JUCE delete that label and build a new one (see
+[The editor (GUI) §7](editor-gui.md#7-resized-layout-by-carving-up-a-rectangle)). It usually
+passed only because the new label tended to land in the same memory. The fix was to look the label
+up again after each resize; after that, 35 full runs in a row were clean.
+
+Neither memory checker could pin it down here. Guard Malloc crashes inside Apple's own start-up code
+as soon as a test touches anything with a window, so it can't run the GUI groups. `MallocScribble`
+caught the old bug only once in eight runs, because the replacement label reuses the freed memory.
+So the GUI groups have no memory checker on this machine; the defence is not keeping pointers that
+JUCE might invalidate.
 
 ### Adding a test
 
@@ -234,7 +249,7 @@ Floats need care: the build's strict warning flags include `-Wfloat-equal`, so c
 
 ### What they can't tell you
 
-They test the GUI's *behaviour* and layout, not whether it looks or feels good (there's a snapshot mode for looking: see [The editor (GUI) §11](editor-gui.md#11-testing-a-gui-with-no-screen)). They don't test how a particular DAW behaves, changes of sample rate in the middle of
+They test the GUI's *behaviour* and layout, not whether it looks or feels good (there's a snapshot mode for looking: see [The editor (GUI) §12](editor-gui.md#12-testing-a-gui-with-no-screen)). They don't test how a particular DAW behaves, changes of sample rate in the middle of
 playback, or what anything sounds like. `auval` and a listen in a real DAW still matter, and the
 [checklist in §1](#1-how-do-you-actually-test-a-gain-plugin-standalone) is still the way to hear
 it.

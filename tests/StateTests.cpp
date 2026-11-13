@@ -41,9 +41,9 @@ namespace
 
     constexpr float tolerance = 1.0e-5f;
 
-    struct StateTests final : public juce::UnitTest
+    struct StateTests final : juce::UnitTest
     {
-        StateTests() : juce::UnitTest ("State save and restore", "SimpleGain") {}
+        StateTests() : UnitTest ("State save and restore", "SimpleGain") {}
 
         void runTest() override
         {
@@ -189,7 +189,7 @@ namespace
             beginTest ("State saved by today's version still loads in every future version");
             {
                 // A literal copy of today's format. If this test ever has to change, saved projects have broken.
-                const auto golden = juce::parseXML ("<PARAMETERS><PARAM id=\"gain\" value=\"-6.0\"/></PARAMETERS>");
+                const auto golden = juce::parseXML (R"(<PARAMETERS><PARAM id="gain" value="-6.0"/></PARAMETERS>)");
                 expect (golden != nullptr);
 
                 SimpleGainAudioProcessor processor;
@@ -199,5 +199,6 @@ namespace
         }
     };
 
-    StateTests stateTests;
+    // Never read: constructing it registers it with JUCE's test runner.
+    [[maybe_unused]] StateTests stateTests;
 }

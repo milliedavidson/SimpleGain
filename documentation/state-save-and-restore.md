@@ -52,7 +52,8 @@ the parameters.
 **The Standalone app uses the same two functions.** JUCE's standalone wrapper calls
 `getStateInformation` when you quit, stores the result as base64 text under the name
 `filterState` in the app's settings file, and feeds it back to `setStateInformation` on launch.
-That's why "set a gain, quit, relaunch" is a real test of this code.
+That's why "set a gain, quit, relaunch" is a real test of this code. It also means the Standalone
+opens at whatever you left it at, not at 0 dB. A new instance in a DAW starts at the default.
 
 ---
 
@@ -281,7 +282,7 @@ its own. It feeds the loader:
 - empty, null and negative-size input, and 1-byte input
 - random noise of five different lengths
 - the valid state **truncated at every possible length**, in a block exactly that long, and again
-  with a multi-byte UTF-8 lead byte as its last byte
+  with a multibyte UTF-8 lead byte as its last byte
 - the valid state with **every single byte corrupted**, repeated across 8 fixed seeds
 
 The seeds are fixed, so every run — and CI — corrupts the same bytes the same way. How to run
@@ -294,7 +295,7 @@ same inputs were run three more ways:
 - **Guard Malloc in strict mode** on the corrupt-data group: 1,288 checks, no faults. In this
   mode every allocation ends exactly at an unmapped guard page, so a read or write even one byte
   past the end faults at once. The truncated inputs live in exact-size blocks, and the last byte
-  is set to each kind of multi-byte UTF-8 lead byte, which is the case a sloppy decoder reads past
+  is set to each kind of multibyte UTF-8 lead byte, which is the case a sloppy decoder reads past
   the end on. To check the mode can catch anything, I pointed it at a deliberate one-byte
   over-read in a throwaway program: it faulted immediately, where plain `malloc` and Guard
   Malloc's default mode both let it through.

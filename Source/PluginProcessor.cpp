@@ -24,7 +24,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout
     // Logic's own Gain plugin. No skew — dB is already a log scale, so skewing
     // would apply the logarithm twice.
     // -> documentation/parameters-and-automation.md sections 2 and 3
-    juce::NormalisableRange<float> gainRange { -60.0f, 30.0f, 0.1f };
+    juce::NormalisableRange gainRange { -60.0f, 30.0f, 0.1f };
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         // The `1` is a version hint for hosts. Never change it for an existing
@@ -41,7 +41,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout
             // rather than "-6.000000". `[]` captures nothing, which matters —
             // this lambda outlives the function that created it.
             // -> documentation/parameters-and-automation.md section 5
-            .withStringFromValueFunction ([] (float valueInDb, int)
+            .withStringFromValueFunction ([] (const float valueInDb, int)
             {
                 return juce::String (valueInDb, 1) + " dB";
             })));
@@ -77,7 +77,7 @@ SimpleGainAudioProcessor::~SimpleGainAudioProcessor() = default;
 //==============================================================================
 //  The audio lifecycle
 //==============================================================================
-void SimpleGainAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void SimpleGainAudioProcessor::prepareToPlay (const double sampleRate, int samplesPerBlock)
 {
     juce::ignoreUnused (samplesPerBlock);
 
@@ -174,7 +174,7 @@ juce::AudioProcessorEditor* SimpleGainAudioProcessor::createEditor()
 {
     // A factory: the host calls this each time the window opens, and deletes
     // the result when it closes. Bare `new` is correct here because the host
-    // takes ownership. -> documentation/editor-gui.md section 10
+    // takes ownership. -> documentation/editor-gui.md section 11
     return new SimpleGainAudioProcessorEditor (*this);
 }
 
@@ -192,7 +192,7 @@ void SimpleGainAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
         copyXmlToBinary (*xml, destData);
 }
 
-void SimpleGainAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void SimpleGainAudioProcessor::setStateInformation (const void* data, const int sizeInBytes)
 {
     // These bytes come out of a project file, so trust nothing: it must be
     // readable XML AND our document, otherwise ignore it. The tag is compared

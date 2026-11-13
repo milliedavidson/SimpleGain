@@ -15,12 +15,12 @@ namespace
 {
     using namespace support;
 
-    struct CorruptStateTests final : public juce::UnitTest
+    struct CorruptStateTests final : juce::UnitTest
     {
-        CorruptStateTests() : juce::UnitTest ("Corrupt state data", "SimpleGain") {}
+        CorruptStateTests() : UnitTest ("Corrupt state data", "SimpleGain") {}
 
         /** Whatever junk arrives, the plugin must not crash, and the gain must stay a sane number in range. */
-        void survives (const void* data, int size, const juce::String& label)
+        void survives (const void* data, const int size, const juce::String& label)
         {
             SimpleGainAudioProcessor processor;
             setGainDb (processor, -6.0f);
@@ -33,8 +33,6 @@ namespace
         void runTest() override
         {
             beginTest ("Empty, garbage and truncated state never crashes the host");
-
-            ScopedCorruptDataAssertionFilter filter;
 
             const auto valid = savedStateAt (-6.0f);
             const auto validBytes = static_cast<const char*> (valid.getData());
@@ -68,7 +66,7 @@ namespace
                 for (int index = 0; index < size; ++index)                   // every single-byte corruption
                 {
                     juce::MemoryBlock corrupted (valid);
-                    static_cast<char*> (corrupted.getData())[index] = static_cast<char> (random.nextInt (256));
+                    corrupted[index] = static_cast<char> (random.nextInt (256));
                     survives (corrupted.getData(), size, "seed " + juce::String (seed) + ", byte "
                                                          + juce::String (index) + " corrupted");
                 }
@@ -91,11 +89,12 @@ namespace
                 }
             }
 
-            if (filter.swallowed > 0)
+            if (ScopedCorruptDataAssertionFilter filter; filter.swallowed > 0)
                 logMessage ("JUCE's own debug assertions fired " + juce::String (filter.swallowed)
                             + " times on the corrupt inputs. Debug builds only; not a crash.");
         }
     };
 
-    CorruptStateTests corruptStateTests;
+    // Never read: constructing it registers it with JUCE's test runner.
+    [[maybe_unused]] CorruptStateTests corruptStateTests;
 }

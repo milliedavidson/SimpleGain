@@ -19,13 +19,13 @@ namespace
     constexpr double tolerance = 0.01;
 
     /** The editor's gain knob, found by the ID the editor gives it (so tests need no access to its internals). */
-    juce::Slider* findKnob (juce::Component& editor)
+    juce::Slider* findKnob (const juce::Component& editor)
     {
         return dynamic_cast<juce::Slider*> (editor.findChildWithID ("gainSlider"));
     }
 
     /** The label inside the knob that shows the value, and the font JUCE will actually draw it with. */
-    juce::Label* findValueLabel (juce::Slider& knob)
+    juce::Label* findValueLabel (const juce::Slider& knob)
     {
         for (auto* child : knob.getChildren())
             if (auto* label = dynamic_cast<juce::Label*> (child))
@@ -41,7 +41,7 @@ namespace
 
     struct EditorTests final : public juce::UnitTest
     {
-        EditorTests() : juce::UnitTest ("Editor", "SimpleGain") {}
+        EditorTests() : UnitTest ("Editor", "SimpleGain") {}
 
         void runTest() override
         {
@@ -66,7 +66,7 @@ namespace
             SimpleGainAudioProcessor processor;
             expect (processor.hasEditor());
 
-            std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+            const std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
             expect (dynamic_cast<SimpleGainAudioProcessorEditor*> (editor.get()) != nullptr,
                     "createEditor() returned something other than SimpleGainAudioProcessorEditor");
         }
@@ -101,7 +101,7 @@ namespace
             setGainDb (processor, -6.0f);
 
             SimpleGainAudioProcessorEditor editor (processor);
-            auto* knob = findKnob (editor);
+            const auto* knob = findKnob (editor);
             expect (knob != nullptr, "no knob with the ID \"gainSlider\"");
             if (knob != nullptr)
                 expectWithinAbsoluteError (knob->getValue(), -6.0, tolerance);
@@ -112,7 +112,7 @@ namespace
             beginTest ("Turning the knob moves the parameter");
 
             SimpleGainAudioProcessor processor;
-            SimpleGainAudioProcessorEditor editor (processor);
+            const SimpleGainAudioProcessorEditor editor (processor);
             auto* knob = findKnob (editor);
             if (knob == nullptr)
                 return expect (false, "no knob");
@@ -130,7 +130,7 @@ namespace
             beginTest ("When the host moves the parameter, the knob follows");
 
             SimpleGainAudioProcessor processor;
-            SimpleGainAudioProcessorEditor editor (processor);
+            const SimpleGainAudioProcessorEditor editor (processor);
             auto* knob = findKnob (editor);
             if (knob == nullptr)
                 return expect (false, "no knob");
@@ -148,7 +148,7 @@ namespace
             beginTest ("The text box shows what the host shows, and accepts what a person types");
 
             SimpleGainAudioProcessor processor;
-            SimpleGainAudioProcessorEditor editor (processor);
+            const SimpleGainAudioProcessorEditor editor (processor);
             auto* knob = findKnob (editor);
             if (knob == nullptr)
                 return expect (false, "no knob");
@@ -165,8 +165,8 @@ namespace
             beginTest ("The knob covers the parameter's range, and double-click resets to 0 dB");
 
             SimpleGainAudioProcessor processor;
-            SimpleGainAudioProcessorEditor editor (processor);
-            auto* knob = findKnob (editor);
+            const SimpleGainAudioProcessorEditor editor (processor);
+            const auto* knob = findKnob (editor);
             if (knob == nullptr)
                 return expect (false, "no knob");
 
@@ -183,7 +183,7 @@ namespace
 
             SimpleGainAudioProcessor processor;
             SimpleGainAudioProcessorEditor editor (processor);
-            auto* knob = findKnob (editor);
+            const auto* knob = findKnob (editor);
             const auto* constrainer = editor.getConstrainer();
             if (knob == nullptr || constrainer == nullptr)
                 return expect (false, "no knob or no constrainer");
@@ -201,7 +201,7 @@ namespace
                 expectGreaterThan (knob->getWidth(), 80, "knob too small at " + label);
                 expectGreaterThan (knob->getHeight(), 80, "knob too small at " + label);
 
-                for (auto* child : editor.getChildren())
+                for (const auto* child : editor.getChildren())
                     expect (editor.getLocalBounds().contains (child->getBounds()), "a child sticks out at " + label);
             }
         }
@@ -212,21 +212,30 @@ namespace
 
             SimpleGainAudioProcessor processor;
             SimpleGainAudioProcessorEditor editor (processor);
-            auto* knob = findKnob (editor);
-            auto* label = knob != nullptr ? findValueLabel (*knob) : nullptr;
+            const auto* knob = findKnob (editor);
             const auto* constrainer = editor.getConstrainer();
-            if (label == nullptr || constrainer == nullptr)
-                return expect (false, "no value label or no constrainer");
+            if (knob == nullptr || constrainer == nullptr)
+                return expect (false, "no knob or no constrainer");
 
-            editor.setSize (constrainer->getMinimumWidth(), constrainer->getMinimumHeight());
-            const auto smallest = valueTextHeight (*label);
-            expectLessOrEqual (smallest, static_cast<float> (label->getHeight()), "text taller than its box at the smallest size");
+            // Resize, then find the value label AGAIN: a new text-box size makes JUCE delete the
+            // label and build a new one, so a pointer kept from before would dangle.
+            // -> documentation/editor-gui.md section 7
+            const auto textHeightAt = [&] (const int width, const int height, const juce::String& name)
+            {
+                editor.setSize (width, height);
+                auto* label = findValueLabel (*knob);
+                if (label == nullptr)
+                    return expect (false, "no value label at the " + name + " size"), 0.0f;
 
-            editor.setSize (constrainer->getMaximumWidth(), constrainer->getMaximumHeight());
-            const auto largest = valueTextHeight (*label);
-            expectLessOrEqual (largest, static_cast<float> (label->getHeight()), "text taller than its box at the largest size");
+                const auto textHeight = valueTextHeight (*label);
+                expectLessOrEqual (textHeight, static_cast<float> (label->getHeight()), "text taller than its box at the " + name + " size");
+                return textHeight;
+            };
 
-            // The window is 2.67x taller at its largest than at its smallest, so the text should grow by about that much.
+            const auto smallest = textHeightAt (constrainer->getMinimumWidth(), constrainer->getMinimumHeight(), "smallest");
+            const auto largest  = textHeightAt (constrainer->getMaximumWidth(), constrainer->getMaximumHeight(), "largest");
+
+            // The window is 2.67x taller at its largest, than at its smallest, so the text should grow by about that much.
             expectGreaterThan (largest, smallest * 2.0f, "the value text doesn't scale with the window");
 
             // The look-and-feel is only meant for the knob's value box: the title keeps the font it was given.
@@ -280,7 +289,7 @@ namespace
             for (int i = 0; i < 50; ++i)
             {
                 SimpleGainAudioProcessorEditor editor (processor);
-                auto* knob = findKnob (editor);
+                const auto* knob = findKnob (editor);
                 if (knob == nullptr)
                     return expect (false, "no knob");
 
@@ -292,11 +301,12 @@ namespace
             setGainDb (processor, 12.0f);
             expectWithinAbsoluteError (static_cast<double> (gainDb (processor)), 12.0, tolerance);
 
-            SimpleGainAudioProcessorEditor reopened (processor);
-            if (auto* knob = findKnob (reopened))
+            const SimpleGainAudioProcessorEditor reopened (processor);
+            if (const auto* knob = findKnob (reopened))
                 expectWithinAbsoluteError (knob->getValue(), 12.0, tolerance, "reopened after the parameter moved");
         }
     };
 
-    EditorTests editorTests;
+    // Never read: constructing it registers it with JUCE's test runner.
+    [[maybe_unused]] EditorTests editorTests;
 }

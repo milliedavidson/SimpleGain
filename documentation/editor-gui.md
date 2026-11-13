@@ -27,10 +27,12 @@ parameter in both directions, why member order matters, and how a GUI gets teste
 - **`paint()` draws, `resized()` positions.** JUCE calls both; we never do. Every size is a
   fraction of the window, so the whole layout scales.
 - **The window resizes** between 75% and 200% of its opening size, always keeping its shape.
+- **The knob follows the pointer round its arc, but a click never moves it.** JUCE's styles do
+  one or the other, so a small subclass of `juce::Slider` adapts JUCE's circular style.
 - **A `LookAndFeel` is JUCE's theme.** Ours makes the value text scale with its box. It's one
   small class, and it has to be detached again in the destructor.
 - **It's tested without a screen.** JUCE can build a component, lay it out and paint it into an
-  image in memory. 11 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
+  image in memory. 16 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
 - **Nothing permanent changed.** The parameter id, range and saved format are untouched; the
   editor only *reads and writes* the parameter.
 
@@ -104,12 +106,12 @@ conversions; in C++ you opt out of them with `explicit`.
 ## 3. The knob and the title
 
 ```cpp
-gainSlider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
+RelativeRotarySlider gainSlider;        // a juce::Slider that turns like a real knob
 gainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 120, 28);
 ```
 
-- **`RotaryHorizontalVerticalDrag`** draws a knob that you turn by dragging up/down *or*
-  left/right. The other rotary style makes you drag in a circle, which is awkward with a mouse.
+- **The knob** is a `juce::Slider` drawn as a rotary knob. You turn it by dragging round it, and
+  how that works without the value jumping on a click is section 10.
 - **The text box** below the knob shows the value, and you click it to type a number. The
   `false` means it's *not* read-only. The width and height are placeholders: `resized()`
   replaces them with sizes proportional to the window.
@@ -148,7 +150,7 @@ it runs:
 The attachment also **replaces the slider's own range and text functions with the parameter's**.
 That's why the box reads `−6.0 dB`, not `-6` — the text lambda from
 [Parameters & automation](parameters-and-automation.md) is reused, and the knob covers
-−60..+30 dB without our repeating those numbers in the editor. The range exists in exactly one
+−60...+30 dB without our repeating those numbers in the editor. The range exists in exactly one
 place.
 
 **C# comparison.** This is WPF data binding with `Mode=TwoWay`:
@@ -157,7 +159,7 @@ place.
 <Slider Value="{Binding Gain, Mode=TwoWay}" Minimum="-60" Maximum="30" />
 ```
 
-Same idea: the view and the model stay in sync without hand-written event handlers. The
+Same idea: the view and the model stay in sync without hand written event handlers. The
 difference is that here it's an object you construct, not markup, and it has to be kept *alive* for
 the binding to hold (the next section).
 
@@ -256,6 +258,15 @@ others.
 positions, but it's why we divide *last*: `defaultWidth * 3 / 4`, not `defaultWidth * 0.75`
 converted back. In C#, `int / int` behaves the same way, so this one will feel familiar.
 
+**Resizing rebuilds the value box.** `resized()` calls `gainSlider.setTextBoxStyle (...)` with new
+sizes. When a size changes, JUCE deletes the box's `Label` and creates a new one, so anything still
+pointing at the old label is left dangling. A test did exactly that, and crashed about one run in
+four (the story is in [Testing](testing.md#how-i-know-they-can-fail)). The rule: never keep a
+pointer to a child that JUCE owns across a call that might rebuild it. Look it up again, or use
+`juce::Component::SafePointer`, which becomes null when its component is deleted (like C#'s
+`WeakReference`). A side effect for users: typing in the box while the window is resized loses the
+edit, which is rare enough to live with.
+
 ---
 
 ## 8. Making the window resizable
@@ -338,7 +349,70 @@ because they cost nothing and either alone would catch a slip in the other.
 
 ---
 
-## 10. Wiring it in: `createEditor()`
+## 10. Turning the knob: following the pointer without jumping
+
+JUCE offers four ways to turn a rotary slider with the mouse:
+
+| Style                          | You turn it by             | The catch                                       |
+|--------------------------------|----------------------------|-------------------------------------------------|
+| `RotaryVerticalDrag`           | dragging up or down        | the dot doesn't follow the pointer              |
+| `RotaryHorizontalDrag`         | dragging left or right     | the same                                        |
+| `RotaryHorizontalVerticalDrag` | either                     | the same, and diagonal moves cancel out         |
+| `Rotary`                       | dragging round in a circle | a click jumps the value to wherever you clicked |
+
+The first version used `RotaryHorizontalVerticalDrag`, and in testing the knob felt broken. That
+style ignores where the pointer is and only adds up how far it has moved up or right. So turning
+the dot clockwise down the right-hand side *lowered* the gain, because that's a downward drag.
+
+`Rotary` follows the pointer, but brings a worse problem. On a click, JUCE moves the value straight
+to the angle under the pointer. One stray click near the bottom right of the knob would jump to
++30 dB.
+
+So the knob is our own small subclass, `RelativeRotarySlider`. It keeps JUCE's `Rotary` style,
+but changes each mouse event before JUCE sees it:
+
+```cpp
+void RelativeRotarySlider::mouseDown (const juce::MouseEvent& e)
+{
+    lastPointerAngle.reset();                   // a new grab: measure afresh
+    juce::Slider::mouseDown (turnedToTheDot (e));
+}
+```
+
+`turnedToTheDot` moves the event's position round the knob's centre, to where the dot should be:
+
+1. **When a grab starts**, the event is moved onto the dot itself. JUCE sees a click exactly where
+   the value already is, so nothing changes.
+2. **On every drag**, the dot turns by however far the pointer turned since the last event. Grab
+   the dot and it stays under the pointer. Grab anywhere else and it turns by the same angle, like
+   a real knob.
+3. **Past either end**, the dot waits at the end until the pointer comes back round to it.
+
+Everything else is still JUCE's: the value box, double-click reset, and telling the host when a
+drag starts and ends. That last part matters for automation. A host records a control move between
+a "gesture begin" and a "gesture end", and only JUCE's `Slider` can send those, because the code
+that does it is private. Overriding the mouse handlers and then calling the base class keeps it.
+
+**Two details the tests found:**
+
+- **Measure each turn the short way round.** `std::atan2` gives angles from −π to +π, and jumps
+  from one to the other at 6 o'clock. Without care, moving the pointer one degree across the bottom
+  of the knob looks like a whole turn. `std::remainder (difference, 2π)` folds any difference into
+  −π...+π, the short way round.
+- **JUCE's own end stop gives up after half a turn.** Keep turning more than half a turn past an
+  end, and JUCE decides you're now nearer the *other* end and jumps there: from −60 dB straight up
+  towards +30 dB. Our version adds up the total angle turned, so it can't wrap round.
+
+Within 5 pixels of the centre the pointer has no meaningful angle. JUCE ignores those events, and
+so do we.
+
+**C# comparison.** `std::optional<double>` is C#'s `double?`. `has_value()` is `HasValue`,
+`*lastPointerAngle` is `.Value`, and `reset()` is assigning `null`. Here, empty means "no grab has
+started yet".
+
+---
+
+## 11. Wiring it in: `createEditor()`
 
 The processor decides what window it shows:
 
@@ -361,7 +435,7 @@ the whole change. A test checks it hasn't been swapped back.
 
 ---
 
-## 11. Testing a GUI with no screen
+## 12. Testing a GUI with no screen
 
 A common assumption is that GUIs can't be tested automatically. They can, as far as *behaviour*
 goes, because a component doesn't need a window to exist. The 11 tests in
@@ -381,14 +455,25 @@ goes, because a component doesn't need a window to exist. The 11 tests in
 | It actually draws                              | The gradient and the knob are really in the image                                 |
 | Opening and closing                            | 50 open/close cycles, and the parameter moving while *no* editor exists           |
 
+The 5 tests in `tests/KnobDragTests.cpp` (group **Knob dragging**, 23 checks) send the knob the
+same mouse events JUCE would, from a fake mouse:
+
+| Test                 | What it proves                                                                            |
+|----------------------|-------------------------------------------------------------------------------------------|
+| Clicking never jumps | A click at either end, the top, the gap or the centre leaves the gain alone               |
+| Follows the pointer  | Dragging the dot round the arc lands on +15 dB, then back on −30 dB                       |
+| Grab anywhere        | Grabbing away from the dot and turning moves the gain by the angle turned                 |
+| Stops at the ends    | Turning ¾ of a circle past either end holds there, then turning back returns to the start |
+| One gesture per drag | The host sees exactly one gesture begin and one end, so automation records one move       |
+
 The tests were **written first**. Against the old generic editor, 8 tests passed and 10 failed; then the editor made them
 pass. The look-and-feel test was written the same way: it failed with the text stuck at 15 points,
-then passed. Afterwards the editor was deliberately broken in fifteen ways to prove the tests notice, and
-all fifteen were caught (see [Testing](testing.md#how-i-know-they-can-fail)). Some were only caught
+then passed. Afterwards the editor was deliberately broken in twenty-two ways to prove the tests notice, and
+all twenty-two were caught (see [Testing](testing.md#how-i-know-they-can-fail)). Some were only caught
 after I fixed the tests: an invisible knob slipped past the first "it draws" test, and forgetting
 to detach the look-and-feel was invisible until the test app began counting JUCE's assertions.
 
-What they *can't* prove is that it looks good, or feels good to drag. For that, there's a
+What they *can't* prove is that it looks good, or that the drag *feels* right in the hand. For that, there's a
 **snapshot mode**:
 
 ```bash

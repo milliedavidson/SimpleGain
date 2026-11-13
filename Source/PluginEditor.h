@@ -13,6 +13,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
 
+#include <optional>
+
 
 //==============================================================================
 /**
@@ -25,6 +27,31 @@ class SimpleGainLookAndFeel final : public juce::LookAndFeel_V4
 {
 public:
     juce::Font getLabelFont (juce::Label&) override;
+};
+
+
+//==============================================================================
+/**
+    A knob you turn by dragging round it, like a real one, but RELATIVELY: a click
+    on its own never changes the value, and the dot moves by the angle you turn.
+    (JUCE's own Rotary style jumps to wherever you click — +30 dB at one end.)
+    -> documentation/editor-gui.md section 10
+*/
+class RelativeRotarySlider final : public juce::Slider
+{
+public:
+    RelativeRotarySlider();
+
+    void mouseDown (const juce::MouseEvent&) override;
+    void mouseDrag (const juce::MouseEvent&) override;
+
+private:
+    /** The same event, turned round the knob's centre so the grab lines up with the dot. */
+    juce::MouseEvent turnedToTheDot (const juce::MouseEvent&);
+
+    // Like C#'s double?: empty until a grab has a pointer angle to start from.
+    std::optional<double> lastPointerAngle;
+    double dotAngleUnlimited = 0.0;     // where the dot would be with no end stops
 };
 
 
@@ -60,7 +87,7 @@ private:
     // -> documentation/editor-gui.md section 5
     SimpleGainLookAndFeel lookAndFeel;
     juce::Label titleLabel;
-    juce::Slider gainSlider;
+    RelativeRotarySlider gainSlider;
     juce::AudioProcessorValueTreeState::SliderAttachment gainAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleGainAudioProcessorEditor)

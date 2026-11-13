@@ -423,14 +423,18 @@ editor holds a reference to the processor rather than owning it, and the message
 **Status: built and tested; the by-hand check is yours.** Details, pictures and the test table are in
 [The editor (GUI)](editor-gui.md). Where the build differs from the plan above:
 
-- **Written test-first**, with 10 tests that need no screen (8 passed and 10 failed against the old
-  generic editor, then all green). Ten deliberate breakages of the editor were all caught.
+- **Written test-first**, with 16 tests that need no screen (8 passed and 10 failed against the old
+  generic editor, then all green). Twenty-two deliberate breakages of the editor were all caught.
+- **The knob turns like a real one.** First testing showed the up/down drag style felt broken, so a
+  small `juce::Slider` subclass now follows the pointer round the arc, and a click never moves it
+  (see [The editor §10](editor-gui.md#10-turning-the-knob-following-the-pointer-without-jumping)).
 - **The editor keeps no reference to the processor.** The base class already holds one, so a second
   copy would be redundant. The processor is passed in by reference and only used to build the attachment.
 - **A snapshot mode** was added: `SimpleGain_Tests --snapshots <folder>` renders the editor to PNG
   files, which is how the pictures in the docs are made and how the layout was checked by eye.
-- **Known gap:** the value text doesn't scale with the window (see
-  [The editor §8](editor-gui.md#8-making-the-window-resizable)).
+- **A custom `LookAndFeel`** makes the value text scale with the window (see
+  [The editor §9](editor-gui.md#9-a-look-and-feel-making-the-value-text-scale)). The test app now also
+  fails if JUCE raises any debug assertion.
 - **Still needs a human:** open the Standalone, turn the knob, type a value, double-click to reset,
   drag the corner to resize, and check in a DAW that automation moves the knob.
 
