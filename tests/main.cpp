@@ -14,10 +14,11 @@ namespace
     /** JUCE reports a debug assertion (a broken rule inside JUCE or our code) by logging it, which on its
         own fails nothing. This counts them so the run can fail: a use-after-free or a widget deleted while
         still in use shows up here even when every check passes. */
-    struct AssertionCounter final : public juce::Logger
+    struct AssertionCounter final : juce::Logger
     {
         int count = 0;
 
+    protected:
         void logMessage (const juce::String& message) override
         {
             if (message.startsWith ("JUCE Assertion failure"))
@@ -28,8 +29,9 @@ namespace
     };
 
     /** JUCE's runner logs through its own Logger; send it to the terminal so ctest and CI show it. */
-    struct ConsoleRunner final : public juce::UnitTestRunner
+    struct ConsoleRunner final : juce::UnitTestRunner
     {
+    protected:
         void logMessage (const juce::String& message) override  { std::cout << message << std::endl; }
     };
 }

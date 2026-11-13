@@ -34,6 +34,9 @@ namespace
         {
             beginTest ("Empty, garbage and truncated state never crashes the host");
 
+            // Must exist for the whole test: it swallows JUCE's expected assertions only while it is alive.
+            ScopedCorruptDataAssertionFilter filter;
+
             const auto valid = savedStateAt (-6.0f);
             const auto validBytes = static_cast<const char*> (valid.getData());
             const auto size = static_cast<int> (valid.getSize());
@@ -74,7 +77,7 @@ namespace
 
             // Every possible truncation. Each copy lives in a block EXACTLY that long, so code that reads past
             // the end touches unowned memory (and a memory checker can see it) rather than harmlessly reading
-            // the rest of the original. The last byte is also set to each kind of multi-byte UTF-8 lead byte:
+            // the rest of the original. The last byte is also set to each kind of multibyte UTF-8 lead byte:
             // the case a sloppy decoder reads past the end on.
             for (int length = 1; length < size; ++length)
             {
@@ -89,7 +92,7 @@ namespace
                 }
             }
 
-            if (ScopedCorruptDataAssertionFilter filter; filter.swallowed > 0)
+            if (filter.swallowed > 0)
                 logMessage ("JUCE's own debug assertions fired " + juce::String (filter.swallowed)
                             + " times on the corrupt inputs. Debug builds only; not a crash.");
         }
