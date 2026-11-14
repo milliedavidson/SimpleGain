@@ -29,7 +29,8 @@ parameter in both directions, why member order matters, and how a GUI gets teste
 - **The window resizes** between 75% and 200% of its opening size, always keeping its shape.
 - **The knob follows the pointer round its arc, but a click never moves it.** JUCE's styles do
   one or the other, so a small subclass of `juce::Slider` adapts JUCE's circular style.
-- **A `LookAndFeel` is JUCE's theme.** Ours makes the value text scale with its box. It's one
+- **A `LookAndFeel` is JUCE's theme.** Ours gives the knob its flat look (a slim ring with one
+  accent arc), puts the value in the middle and makes the text scale with its box. It's one
   small class, and it has to be detached again in the destructor.
 - **It's tested without a screen.** JUCE can build a component, lay it out and paint it into an
   image in memory. 16 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
@@ -112,10 +113,10 @@ gainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 120, 28);
 
 - **The knob** is a `juce::Slider` drawn as a rotary knob. You turn it by dragging round it, and
   how that works without the value jumping on a click is section 10.
-- **The text box** below the knob shows the value, and you click it to type a number. The
-  `false` means it's *not* read-only. The width and height are placeholders: `resized()`
-  replaces them with sizes proportional to the window.
-- **Colours** come from the same purple palette as the README banner, set once in an anonymous
+- **The text box** shows the value in the middle of the knob, and you click it to type a number.
+  The `false` means it's *not* read-only. The width and height are placeholders: the
+  look-and-feel decides where the box goes (section 9).
+- **Colours** are near-black greys with one warm apricot accent, set once in an anonymous
   namespace at the top of `PluginEditor.cpp`. `setColour` takes an *ID* (such as
   `rotarySliderFillColourId`) so each part can be styled separately.
 - **`setComponentID ("gainSlider")`** gives the knob a name the tests can look it up by,
@@ -221,7 +222,7 @@ after something moves. **We never call it ourselves.** To ask for a redraw you'd
 `repaint()`, which schedules one.
 
 `juce::Graphics` is the drawing context — WinForms' `Graphics`, or a WPF `DrawingContext`. The
-editor paints only the background and the small credit line; **children paint themselves**, and
+editor paints only the background, the small "GAIN" caption under the value and the credit line; **children paint themselves**, and
 JUCE draws them on top afterwards. The knob and title aren't drawn here.
 
 `paint` can run many times a second while the window is dragged, so it should be cheap and
@@ -301,12 +302,21 @@ and looked tiny beside the knob at the largest window.
 
 ---
 
-## 9. A look-and-feel: making the value text scale
+## 9. A look-and-feel: the flat knob, and value text that scales
 
 JUCE draws every widget through a **`LookAndFeel`**: one object holding the drawing code for
 buttons, sliders, labels and so on, like a theme or a WPF `Style`/`ControlTemplate`. You change
 how something looks by subclassing `LookAndFeel_V4` (JUCE's modern default) and overriding only the
-parts you want. Ours overrides one function:
+parts you want. Ours overrides three functions. Two of them give the knob its flat look:
+
+- **`drawRotarySlider`** strokes a slim grey track ring (2.5% of the knob's diameter, rounded
+  ends), then strokes the accent arc over it from the start of the sweep to the current value.
+  There's no face, tick marks, glow or thumb.
+- **`getSliderLayout`** makes the knob the biggest square that fits and centres the value box
+  inside it, so the number sits in the middle of the ring. The knob's own centre stays where the
+  drag maths in section 10 expects it.
+
+The third scales the value text:
 
 ```cpp
 juce::Font SimpleGainLookAndFeel::getLabelFont (juce::Label& label)

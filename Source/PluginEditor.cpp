@@ -8,13 +8,13 @@
 
 namespace
 {
-    // The same purple palette as the README banner.
-    const juce::Colour backgroundTop    { 0xff1a1530 };
-    const juce::Colour backgroundBottom { 0xff341f4d };
-    const juce::Colour accent           { 0xffa78bfa };
-    const juce::Colour track            { 0xff4c3d70 };
-    const juce::Colour textLight        { 0xfff5f3ff };
-    const juce::Colour textMuted        { 0xff9c8fc4 };
+    // Near-black greys with one warm apricot accent.
+    const juce::Colour backgroundTop    { 0xff18181b };
+    const juce::Colour backgroundBottom { 0xff111113 };
+    const juce::Colour accent           { 0xfff2a766 };
+    const juce::Colour track            { 0xff2c2c31 };
+    const juce::Colour textLight        { 0xffeceae6 };
+    const juce::Colour textMuted        { 0xff77757c };
 
     constexpr int defaultWidth  = 340;
     constexpr int defaultHeight = 440;
@@ -30,6 +30,47 @@ juce::Font SimpleGainLookAndFeel::getLabelFont (juce::Label& label)
         return juce::FontOptions (static_cast<float> (label.getHeight()) * 0.5f);
 
     return LookAndFeel_V4::getLabelFont (label);
+}
+
+
+void SimpleGainLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height,
+                                              float position, float startAngle, float endAngle,
+                                              juce::Slider& slider)
+{
+    // A slim track ring, with the accent arc laid over it up to the current value.
+    // -> documentation/editor-gui.md section 9
+    const auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat();
+    const auto diameter = juce::jmin (bounds.getWidth(), bounds.getHeight());
+    const auto thickness = juce::jmax (2.0f, diameter * 0.025f);
+    const auto radius = diameter * 0.5f - thickness;
+    const auto centre = bounds.getCentre();
+
+    const auto strokeArc = [&] (float from, float to, juce::Colour colour)
+    {
+        juce::Path arc;
+        arc.addCentredArc (centre.x, centre.y, radius, radius, 0.0f, from, to, true);
+        g.setColour (colour);
+        g.strokePath (arc, juce::PathStrokeType (thickness, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    };
+
+    strokeArc (startAngle, endAngle, slider.findColour (juce::Slider::rotarySliderOutlineColourId));
+
+    if (position > 0.0f)
+        strokeArc (startAngle, startAngle + position * (endAngle - startAngle),
+                   slider.findColour (juce::Slider::rotarySliderFillColourId));
+}
+
+juce::Slider::SliderLayout SimpleGainLookAndFeel::getSliderLayout (juce::Slider& slider)
+{
+    // The drag maths in RelativeRotarySlider reads sliderBounds' centre, so keep it the knob's square.
+    const auto area = slider.getLocalBounds();
+    const auto diameter = juce::jmin (area.getWidth(), area.getHeight());
+
+    juce::Slider::SliderLayout layout;
+    layout.sliderBounds = area.withSizeKeepingCentre (diameter, diameter);
+    layout.textBoxBounds = layout.sliderBounds.withSizeKeepingCentre (juce::roundToInt (diameter * 0.74f),
+                                                                      juce::roundToInt (diameter * 0.3f));
+    return layout;
 }
 
 
@@ -91,19 +132,18 @@ SimpleGainAudioProcessorEditor::SimpleGainAudioProcessorEditor (SimpleGainAudioP
 
     titleLabel.setText ("SimpleGain", juce::dontSendNotification);
     titleLabel.setJustificationType (juce::Justification::centred);
-    titleLabel.setColour (juce::Label::textColourId, textLight);
+    titleLabel.setColour (juce::Label::textColourId, textMuted);
     addAndMakeVisible (titleLabel);
 
     // A rotary knob with an editable value box. The ID lets the tests find it.
     // -> documentation/editor-gui.md section 3
     gainSlider.setComponentID ("gainSlider");
     gainSlider.setTitle ("Gain");                       // what a screen reader announces
-    gainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 120, 28);   // resized() rescales it
+    gainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 120, 28);   // makes the value box; the look-and-feel places it
     gainSlider.setColour (juce::Slider::rotarySliderFillColourId,    accent);
     gainSlider.setColour (juce::Slider::rotarySliderOutlineColourId, track);
-    gainSlider.setColour (juce::Slider::thumbColourId,               textLight);
     gainSlider.setColour (juce::Slider::textBoxTextColourId,         textLight);
-    gainSlider.setColour (juce::Slider::textBoxOutlineColourId,      track);
+    gainSlider.setColour (juce::Slider::textBoxOutlineColourId,      juce::Colours::transparentBlack);
     gainSlider.setColour (juce::Slider::textBoxBackgroundColourId,   juce::Colours::transparentBlack);
     gainSlider.setColour (juce::Slider::textBoxHighlightColourId,    accent);
     addAndMakeVisible (gainSlider);
@@ -129,9 +169,13 @@ void SimpleGainAudioProcessorEditor::paint (juce::Graphics& g)
     g.setGradientFill (juce::ColourGradient::vertical (backgroundTop, backgroundBottom, getLocalBounds()));
     g.fillAll();
 
-    // A small credit line along the bottom.
+    // Small caption under the value, inside the ring, and a credit line along the bottom.
     g.setColour (textMuted);
-    g.setFont (juce::FontOptions (static_cast<float> (getHeight()) * 0.035f));
+    g.setFont (juce::FontOptions (static_cast<float> (getHeight()) * 0.03f));
+    const auto knob = gainSlider.getBounds();
+    g.drawText ("GAIN", knob.withTop (knob.getCentreY() + knob.getHeight() / 8).withHeight (getHeight() / 20),
+                juce::Justification::centred);
+
     g.drawText ("Maxximum Displacement", getLocalBounds().removeFromBottom (getHeight() / 10),
                 juce::Justification::centred);
 }
@@ -143,11 +187,10 @@ void SimpleGainAudioProcessorEditor::resized()
     const auto windowHeight = getHeight();
     auto area = getLocalBounds().reduced (getWidth() / 12);
 
-    titleLabel.setFont (juce::FontOptions (static_cast<float> (windowHeight) / 14.0f, juce::Font::bold));
+    titleLabel.setFont (juce::FontOptions (static_cast<float> (windowHeight) / 22.0f, juce::Font::bold));
     titleLabel.setBounds (area.removeFromTop (windowHeight / 9));
 
     area.removeFromBottom (windowHeight / 12);          // room for the credit line drawn in paint()
 
-    gainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, area.getWidth() / 2, windowHeight / 12);
     gainSlider.setBounds (area);
 }

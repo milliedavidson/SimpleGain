@@ -19,14 +19,21 @@
 //==============================================================================
 /**
     A LookAndFeel is JUCE's "theme": one object that decides how widgets draw
-    themselves. Ours changes one thing — the value text in the knob's box scales
-    with the box, instead of staying at a fixed size.
+    themselves. Ours gives the knob a flat look: a slim ring with one accent arc,
+    and the value number big in the middle, scaling with the window.
     -> documentation/editor-gui.md section 9
 */
 class SimpleGainLookAndFeel final : public juce::LookAndFeel_V4
 {
 public:
     juce::Font getLabelFont (juce::Label&) override;
+
+    void drawRotarySlider (juce::Graphics&, int x, int y, int width, int height,
+                           float sliderPosProportional, float rotaryStartAngle,
+                           float rotaryEndAngle, juce::Slider&) override;
+
+    /** The knob is the biggest square that fits; the value box sits in its middle. */
+    juce::Slider::SliderLayout getSliderLayout (juce::Slider&) override;
 };
 
 
