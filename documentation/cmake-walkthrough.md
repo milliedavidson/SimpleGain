@@ -185,7 +185,7 @@ host owns the microphone. Full story: [Identity & macOS §4](plugin-identity-and
 juce_add_plugin(SimpleGain
     FORMATS                     Standalone AU VST3
     COPY_PLUGIN_AFTER_BUILD     TRUE
-    PRODUCT_NAME                "SimpleGain"
+    PRODUCT_NAME                "Simply Gain"
     # ... more arguments
     )
 ```

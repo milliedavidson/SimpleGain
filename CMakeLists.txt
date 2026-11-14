@@ -43,13 +43,13 @@ juce_add_plugin(SimpleGain
     # without an Info.plist usage string.
     # -> documentation/plugin-identity-and-macos.md section 4
     MICROPHONE_PERMISSION_ENABLED   TRUE
-    MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear the plugin processing live sound."
+    MICROPHONE_PERMISSION_TEXT      "Simply Gain needs audio input so you can hear the plugin processing live sound."
     BLUETOOTH_PERMISSION_ENABLED    TRUE
-    BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
+    BLUETOOTH_PERMISSION_TEXT       "Simply Gain uses Bluetooth to discover wireless MIDI devices."
 
     FORMATS                     Standalone AU VST3   # AU is macOS-only
     COPY_PLUGIN_AFTER_BUILD     TRUE                 # installs into ~/Library/Audio/Plug-Ins
-    PRODUCT_NAME                "SimpleGain")
+    PRODUCT_NAME                "Simply Gain")
 
 # Source files are listed explicitly — an unlisted .cpp is silently not built.
 target_sources(SimpleGain

@@ -163,7 +163,7 @@ juce_add_plugin(SimpleGain
 Verify it worked:
 
 ```bash
-plutil -p build/SimpleGain_artefacts/Debug/Standalone/SimpleGain.app/Contents/Info.plist | grep NS
+plutil -p "build/SimpleGain_artefacts/Debug/Standalone/Simply Gain.app/Contents/Info.plist" | grep NS
 ```
 
 **Only the Standalone needs this.** Inside a DAW, the *host* owns the microphone and has

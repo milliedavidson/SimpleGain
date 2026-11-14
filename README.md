@@ -1,10 +1,10 @@
-<img src="documentation/images/banner.svg" alt="SimpleGain — a gain plugin, built from scratch while learning C++">
+<img src="documentation/images/banner.svg" alt="Simply Gain — a gain plugin, built from scratch while learning C++">
 
 <a href="#an-overview">An overview</a> | <a href="#key-features">Key features</a> | <a href="#tech-stack">Tech stack</a> | <a href="#get-started">Get started</a> | <a href="#documentation">Documentation</a> | <a href="#status">Status</a> | <a href="#built-with-claude-ai">Built with Claude AI</a> | <a href="#contributing">Contributing</a> | <a href="#license">License</a>
 
 ## An overview
 
-**SimpleGain** is a volume/gain plugin for Logic, GarageBand, Reaper, Ableton and friends,
+**Simply Gain** is a volume/gain plugin for Logic, GarageBand, Reaper, Ableton and friends,
 built from absolute scratch using [JUCE](https://juce.com/) and CMake.
 
 This is a **test / learning project**, not a polished product. I'm a C# developer teaching
@@ -92,7 +92,7 @@ are incremental.
 **3. Run it**
 
 ```bash
-open build/SimpleGain_artefacts/Debug/Standalone/SimpleGain.app
+open "build/SimpleGain_artefacts/Debug/Standalone/Simply Gain.app"
 ```
 
 The Standalone build is the fast development loop — a real `.app` you can run without a DAW,
@@ -206,7 +206,7 @@ no software is 100% perfect, but I strive to get as close as possible 🙂
 
 ## License
 
-SimpleGain's own source code is licensed under the [MIT License](LICENSE).
+Simply Gain's own source code is licensed under the [MIT License](LICENSE).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

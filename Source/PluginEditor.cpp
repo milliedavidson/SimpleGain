@@ -130,7 +130,7 @@ SimpleGainAudioProcessorEditor::SimpleGainAudioProcessorEditor (SimpleGainAudioP
 {
     setLookAndFeel (&lookAndFeel);      // must be undone in the destructor
 
-    titleLabel.setText ("SimpleGain", juce::dontSendNotification);
+    titleLabel.setText ("Simply Gain", juce::dontSendNotification);
     titleLabel.setJustificationType (juce::Justification::centred);
     titleLabel.setColour (juce::Label::textColourId, textMuted);
     addAndMakeVisible (titleLabel);
