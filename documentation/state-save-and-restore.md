@@ -1,11 +1,11 @@
 # State: save and restore
 
-How the gain survives closing and reopening a project: what a host actually stores, the path
-from a fader to a few bytes in a project file, and why loading has to treat those bytes as
+How the gain survives closing and reopening a project. It covers what a host actually stores, the
+path from a fader to a few bytes in a project file, and why loading has to treat those bytes as
 untrusted.
 
-**SimpleGain docs** · [Index](README.md)  
-**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · **State: save and restore** · [Identity & macOS](plugin-identity-and-macos.md)  
+**Simply Gain docs** · [Index](README.md)  
+**The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · **State: save and restore** · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
@@ -52,7 +52,8 @@ the parameters.
 **The Standalone app uses the same two functions.** JUCE's standalone wrapper calls
 `getStateInformation` when you quit, stores the result as base64 text under the name
 `filterState` in the app's settings file, and feeds it back to `setStateInformation` on launch.
-That's why "set a gain, quit, relaunch" is a real test of this code.
+That's why "set a gain, quit, relaunch" is a real test of this code. It also means the Standalone
+opens at whatever you left it at, not at 0 dB. A new instance in a DAW starts at the default.
 
 ---
 
@@ -143,12 +144,12 @@ supplies the object, the callee fills it — is the C# `out`/`ref` idea.
 
 `copyXmlToBinary` writes a small envelope; I confirmed the layout from JUCE's source:
 
-| Bytes | Content |
-|---|---|
-| 4 | a magic number, `0x21324356`, so it can recognise its own data |
-| 4 | the length of the XML text |
-| 109 | the XML text itself (UTF-8, on one line) |
-| 1 | a closing zero byte |
+| Bytes | Content                                                        |
+|-------|----------------------------------------------------------------|
+| 4     | a magic number, `0x21324356`, so it can recognise its own data |
+| 4     | the length of the XML text                                     |
+| 109   | the XML text itself (UTF-8, on one line)                       |
+| 1     | a closing zero byte                                            |
 
 That's the 118 bytes. Loading is the reverse, and note the signature:
 
@@ -178,13 +179,13 @@ disk or sync trouble, written by a *different* plugin, or written by an older or
 this one. A crash here means **the user's project won't open**, and the plugin takes the blame.
 So every step is a gate:
 
-| Gate | What gets through | What happens otherwise |
-|---|---|---|
+| Gate               | What gets through                                          | What happens otherwise                                                    |
+|--------------------|------------------------------------------------------------|---------------------------------------------------------------------------|
 | `getXmlFromBinary` | well-formed data of the right length with our magic number | returns nothing: empty, truncated, wrong-magic or non-XML data is ignored |
-| exact tag match | a document whose root is `PARAMETERS` | someone else's document is ignored |
-| `replaceState` | `PARAM` entries whose `id` is one we know | unknown ids are ignored |
-| value handling | numbers inside the parameter's range | out-of-range values are clamped (`999` → `+30`, `-999` → `-60`) |
-| missing entries | — | a parameter absent from the saved state returns to its **default** |
+| exact tag match    | a document whose root is `PARAMETERS`                      | someone else's document is ignored                                        |
+| `replaceState`     | `PARAM` entries whose `id` is one we know                  | unknown ids are ignored                                                   |
+| value handling     | numbers inside the parameter's range                       | out-of-range values are clamped (`999` → `+30`, `-999` → `-60`)           |
+| missing entries    | —                                                          | a parameter absent from the saved state returns to its **default**        |
 
 ### What testing turned up
 
@@ -245,11 +246,11 @@ side.
 
 ## 9. What's permanent, and what changing it breaks
 
-| Permanent | Why |
-|---|---|
-| the root tag `PARAMETERS` | the name passed to the `AudioProcessorValueTreeState` constructor; the exact-match check rejects anything else |
-| the parameter id `"gain"` | it's the `id` stored in every saved project |
-| the `PARAM` / `id` / `value` names | JUCE's, not ours — but they're in every saved file |
+| Permanent                          | Why                                                                                                            |
+|------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| the root tag `PARAMETERS`          | the name passed to the `AudioProcessorValueTreeState` constructor; the exact-match check rejects anything else |
+| the parameter id `"gain"`          | it's the `id` stored in every saved project                                                                    |
+| the `PARAM` / `id` / `value` names | JUCE's, not ours — but they're in every saved file                                                             |
 
 A test records today's format as a literal XML string and checks it still loads. **If that test
 ever has to change, saved projects have broken.** Others lock the id, its version hint, and the
@@ -281,7 +282,7 @@ its own. It feeds the loader:
 - empty, null and negative-size input, and 1-byte input
 - random noise of five different lengths
 - the valid state **truncated at every possible length**, in a block exactly that long, and again
-  with a multi-byte UTF-8 lead byte as its last byte
+  with a multibyte UTF-8 lead byte as its last byte
 - the valid state with **every single byte corrupted**, repeated across 8 fixed seeds
 
 The seeds are fixed, so every run — and CI — corrupts the same bytes the same way. How to run
@@ -294,7 +295,7 @@ same inputs were run three more ways:
 - **Guard Malloc in strict mode** on the corrupt-data group: 1,288 checks, no faults. In this
   mode every allocation ends exactly at an unmapped guard page, so a read or write even one byte
   past the end faults at once. The truncated inputs live in exact-size blocks, and the last byte
-  is set to each kind of multi-byte UTF-8 lead byte, which is the case a sloppy decoder reads past
+  is set to each kind of multibyte UTF-8 lead byte, which is the case a sloppy decoder reads past
   the end on. To check the mode can catch anything, I pointed it at a deliberate one-byte
   over-read in a throwaway program: it faulted immediately, where plain `malloc` and Guard
   Malloc's default mode both let it through.

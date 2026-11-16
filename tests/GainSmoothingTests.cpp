@@ -20,10 +20,10 @@ namespace
     };
 
     // Rates and block sizes real hosts use, including the extremes that exposed bugs in the scratch harness.
-    const std::initializer_list<Settings> allSettings { { 44100.0, 256 }, { 48000.0, 64 },
+    constexpr std::initializer_list<Settings> allSettings { { 44100.0, 256 }, { 48000.0, 64 },
                                                         { 48000.0, 512 }, { 96000.0, 512 } };
 
-    struct GainSmoothingTests final : public juce::UnitTest
+    struct GainSmoothingTests final : juce::UnitTest
     {
         GainSmoothingTests() : juce::UnitTest ("Gain smoothing", "SimpleGain") {}
 
@@ -52,9 +52,9 @@ namespace
             }
 
             beginTest ("A big fader jump glides: no two adjacent samples differ by more than the ideal step");
-            for (const auto& settings : allSettings)
+            for (const auto& [sampleRate, blockSize] : allSettings)
             {
-                Rig rig (settings.sampleRate, settings.blockSize);
+                Rig rig (sampleRate, blockSize);
                 rig.prepare();
                 rig.processBlocks (4);
 
@@ -64,17 +64,17 @@ namespace
 
                 // The change is 1.0 -> +24 dB, spread over 20 ms of samples. Phase 3 changed it by 14.85 in one.
                 const auto target = dbToGain (24.0f);
-                const auto rampSamples = static_cast<float> (std::floor (0.02 * settings.sampleRate));
+                const auto rampSamples = static_cast<float> (std::floor (0.02 * sampleRate));
                 const auto idealStep = (target - 1.0f) / rampSamples;
 
                 expectLessThan (biggestStep (rig.left, before), idealStep * 1.1f,
-                                juce::String (settings.sampleRate) + " Hz / " + juce::String (settings.blockSize));
+                                juce::String (sampleRate) + " Hz / " + juce::String (blockSize));
             }
 
             beginTest ("The glide takes about 20 ms whatever the sample rate or block size");
-            for (const auto& settings : allSettings)
+            for (const auto& [sampleRate, blockSize] : allSettings)
             {
-                Rig rig (settings.sampleRate, settings.blockSize);
+                Rig rig (sampleRate, blockSize);
                 rig.prepare();
                 rig.processBlocks (4);
 
@@ -82,8 +82,8 @@ namespace
                 setGainDb (rig.processor, 24.0f);
                 rig.processMilliseconds (60.0);
 
-                const auto ms = msToSettle (rig.left, changeAt, 1.0f, dbToGain (24.0f), settings.sampleRate);
-                const auto label = juce::String (settings.sampleRate) + " Hz / " + juce::String (settings.blockSize);
+                const auto ms = msToSettle (rig.left, changeAt, 1.0f, dbToGain (24.0f), sampleRate);
+                const auto label = juce::String (sampleRate) + " Hz / " + juce::String (blockSize);
 
                 expectGreaterThan (ms, 19.0, label);
                 expectLessThan (ms, 21.0, label);
@@ -91,7 +91,7 @@ namespace
 
             beginTest ("Both channels get exactly the same gain on every sample");
             {
-                // The classic bug: swap the loops and channel 1 ends up on a different part of the ramp.
+                // The classic bug: swap the loops and channel one ends up on a different part of the ramp.
                 Rig rig (48000.0, 512);
                 rig.prepare();
                 rig.processBlocks (2);
@@ -118,9 +118,9 @@ namespace
             }
 
             beginTest ("Dragging the fader every block never produces a big step");
-            for (const auto& settings : allSettings)
+            for (const auto& [sampleRate, blockSize] : allSettings)
             {
-                Rig rig (settings.sampleRate, settings.blockSize);
+                Rig rig (sampleRate, blockSize);
                 rig.prepare();
                 rig.processBlocks (3);
 
@@ -134,10 +134,11 @@ namespace
 
                 // Phase 3's largest step here was 1.72.
                 expectLessThan (biggestStep (rig.left, before), 0.05f,
-                                juce::String (settings.sampleRate) + " Hz / " + juce::String (settings.blockSize));
+                                juce::String (sampleRate) + " Hz / " + juce::String (blockSize));
             }
         }
     };
 
-    GainSmoothingTests gainSmoothingTests;   // constructing it registers it with JUCE's test runner
+    // Never read: constructing it registers it with JUCE's test runner.
+    [[maybe_unused]] GainSmoothingTests gainSmoothingTests;
 }

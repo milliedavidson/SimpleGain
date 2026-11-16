@@ -12,14 +12,14 @@ namespace
 {
     using namespace support;
 
-    struct ParameterTests final : public juce::UnitTest
+    struct ParameterTests final : juce::UnitTest
     {
-        ParameterTests() : juce::UnitTest ("Parameters", "SimpleGain") {}
+        ParameterTests() : UnitTest ("Parameters", "SimpleGain") {}
 
         void runTest() override
         {
             SimpleGainAudioProcessor processor;
-            auto* gain = processor.apvts.getParameter ("gain");
+            const auto* gain = processor.apvts.getParameter ("gain");
 
             beginTest ("The gain parameter exists, with the permanent ID and version hint");
             expect (gain != nullptr, "no parameter with ID \"gain\"");
@@ -48,7 +48,7 @@ namespace
 
             beginTest ("Only matching mono or stereo layouts are accepted");
             {
-                auto layout = [] (juce::AudioChannelSet in, juce::AudioChannelSet out)
+                auto layout = [] (const juce::AudioChannelSet& in, const juce::AudioChannelSet& out)
                 {
                     juce::AudioProcessor::BusesLayout result;
                     result.inputBuses.add (in);
@@ -69,5 +69,6 @@ namespace
         }
     };
 
-    ParameterTests parameterTests;
+    // Never read: constructing it registers it with JUCE's test runner.
+    [[maybe_unused]] ParameterTests parameterTests;
 }

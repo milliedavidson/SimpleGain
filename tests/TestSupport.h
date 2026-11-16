@@ -124,6 +124,14 @@ namespace support
         {
             if (message.startsWith ("JUCE Assertion failure in juce_"))
                 ++swallowed;
+            else if (previous != nullptr)
+            {
+                // Pass it on to main.cpp's counter, which fails the run. logMessage is protected,
+                // so hand the message to the logger we replaced and then step back in.
+                juce::Logger::setCurrentLogger (previous);
+                juce::Logger::writeToLog (message);
+                juce::Logger::setCurrentLogger (this);
+            }
             else
                 std::cout << message << std::endl;
         }

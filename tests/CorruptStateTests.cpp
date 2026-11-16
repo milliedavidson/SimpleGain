@@ -15,12 +15,12 @@ namespace
 {
     using namespace support;
 
-    struct CorruptStateTests final : public juce::UnitTest
+    struct CorruptStateTests final : juce::UnitTest
     {
-        CorruptStateTests() : juce::UnitTest ("Corrupt state data", "SimpleGain") {}
+        CorruptStateTests() : UnitTest ("Corrupt state data", "SimpleGain") {}
 
         /** Whatever junk arrives, the plugin must not crash, and the gain must stay a sane number in range. */
-        void survives (const void* data, int size, const juce::String& label)
+        void survives (const void* data, const int size, const juce::String& label)
         {
             SimpleGainAudioProcessor processor;
             setGainDb (processor, -6.0f);
@@ -34,6 +34,7 @@ namespace
         {
             beginTest ("Empty, garbage and truncated state never crashes the host");
 
+            // Must exist for the whole test: it swallows JUCE's expected assertions only while it is alive.
             ScopedCorruptDataAssertionFilter filter;
 
             const auto valid = savedStateAt (-6.0f);
@@ -68,7 +69,7 @@ namespace
                 for (int index = 0; index < size; ++index)                   // every single-byte corruption
                 {
                     juce::MemoryBlock corrupted (valid);
-                    static_cast<char*> (corrupted.getData())[index] = static_cast<char> (random.nextInt (256));
+                    corrupted[index] = static_cast<char> (random.nextInt (256));
                     survives (corrupted.getData(), size, "seed " + juce::String (seed) + ", byte "
                                                          + juce::String (index) + " corrupted");
                 }
@@ -76,7 +77,7 @@ namespace
 
             // Every possible truncation. Each copy lives in a block EXACTLY that long, so code that reads past
             // the end touches unowned memory (and a memory checker can see it) rather than harmlessly reading
-            // the rest of the original. The last byte is also set to each kind of multi-byte UTF-8 lead byte:
+            // the rest of the original. The last byte is also set to each kind of multibyte UTF-8 lead byte:
             // the case a sloppy decoder reads past the end on.
             for (int length = 1; length < size; ++length)
             {
@@ -97,5 +98,6 @@ namespace
         }
     };
 
-    CorruptStateTests corruptStateTests;
+    // Never read: constructing it registers it with JUCE's test runner.
+    [[maybe_unused]] CorruptStateTests corruptStateTests;
 }

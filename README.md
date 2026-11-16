@@ -1,23 +1,23 @@
-<img src="documentation/images/banner.svg" alt="SimpleGain — a gain plugin, built from scratch while learning C++">
+<img src="documentation/images/banner.svg" alt="Simply Gain — a gain plugin, built from scratch while learning C++">
 
 <a href="#an-overview">An overview</a> | <a href="#key-features">Key features</a> | <a href="#tech-stack">Tech stack</a> | <a href="#get-started">Get started</a> | <a href="#documentation">Documentation</a> | <a href="#status">Status</a> | <a href="#built-with-claude-ai">Built with Claude AI</a> | <a href="#contributing">Contributing</a> | <a href="#license">License</a>
 
 ## An overview
 
-**SimpleGain** is a volume/gain plugin for Logic, GarageBand, Reaper, Ableton and friends,
+**Simply Gain** is a volume/gain plugin for Logic, GarageBand, Reaper, Ableton and friends,
 built from absolute scratch using [JUCE](https://juce.com/) and CMake.
 
-This is a **test / learning project**, not a polished product — I'm a C# developer teaching
-myself C++ and audio DSP, one plugin at a time, and gain is deliberately the simplest possible
+This is a **test / learning project**, not a polished product. I'm a C# developer teaching
+myself C++ and audio DSP, one plugin at a time. Gain is deliberately the simplest possible
 starting point: the actual signal processing is one multiply. All the real learning is in the
-*architecture*; how a plugin talks to a host, how the audio thread's rules differ from
-everything else you've written and what C++ is doing that C# quietly does for you.
+*architecture*. That means how a plugin talks to a host, how the audio thread's rules differ from
+everything else you've written, and what C++ is doing that C# quietly does for you.
 
 Because of that, **the code is littered with comments** and is closer to a tutorial than production
 source. Every C++ construct gets a "what this is / why it's here" note, often with
 a C# comparison. If you're coming from a managed language and finding your footing in C++ or
-audio programming, I hope this is useful — there aren't nearly enough audio
-programming resources out there and maybe this fills a tiny gap.
+audio programming, I hope this is useful. There aren't nearly enough audio
+programming resources out there, and maybe this fills a tiny gap.
 
 **Use it for whatever you like.** Fork it, strip it down, build on top of it, use it to learn - whatever. And if you spot something wrong or have a better
 way to do it, I'd love to hear it: see [Contributing](#contributing).
@@ -92,7 +92,7 @@ are incremental.
 **3. Run it**
 
 ```bash
-open build/SimpleGain_artefacts/Debug/Standalone/SimpleGain.app
+open "build/SimpleGain_artefacts/Debug/Standalone/Simply Gain.app"
 ```
 
 The Standalone build is the fast development loop — a real `.app` you can run without a DAW,
@@ -137,23 +137,24 @@ The code stays light on comments; the reasoning lives in
 **[`documentation/`](documentation/README.md)**. Each doc opens with an "In short" summary, then
 goes deep.
 
-| Doc | What's in it |
-|---|---|
-| **The plugin** | |
-| [The plan](documentation/plan.md) | The phased build, start to finish |
-| [Hosting & threads](documentation/plugin-hosting-and-threads.md) | Why the DAW owns `main()`, the audio thread's deadline, samples vs blocks |
-| [Parameters & automation](documentation/parameters-and-automation.md) | APVTS, dB vs linear gain, skew, thread-safe parameter reads |
-| [Smoothing & the audio loop](documentation/smoothing-and-the-audio-loop.md) | Zipper noise and `SmoothedValue`, loop order, raw pointers, denormals |
-| [State: save and restore](documentation/state-save-and-restore.md) | What a host stores, `ValueTree` → XML → bytes, loading untrusted data safely |
-| [Identity & macOS](documentation/plugin-identity-and-macos.md) | Bundle IDs, 4-character codes, `auval`, privacy permissions |
-| **C++ foundations** | |
-| [Memory model](documentation/cpp-memory-model.md) | Stack vs heap, references vs pointers, RAII vs garbage collection |
-| [Build pipeline](documentation/cpp-build-pipeline.md) | Headers, preprocessor, compiling and linking, vs Roslyn and the CLR |
-| [CMake walkthrough](documentation/cmake-walkthrough.md) | `CMakeLists.txt` line by line, and why Debug builds matter for audio |
-| **Workflow** | |
-| [Dev tooling](documentation/dev-workflow-and-tooling.md) | CLion, CMake generators, Ninja, git submodules |
-| [Testing](documentation/testing.md) | The automated tests, and how to hear it standalone and in a DAW |
-| [CI & GitHub Actions](documentation/ci-and-github-actions.md) | What the pipeline does, and why the default template didn't work |
+| Doc                                                                         | What's in it                                                                                   |
+|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| **The plugin**                                                              |                                                                                                |
+| [The plan](documentation/plan.md)                                           | The phased build, start to finish                                                              |
+| [Hosting & threads](documentation/plugin-hosting-and-threads.md)            | Why the DAW owns `main()`, the audio thread's deadline, samples vs blocks                      |
+| [Parameters & automation](documentation/parameters-and-automation.md)       | APVTS, dB vs linear gain, skew, thread-safe parameter reads                                    |
+| [Smoothing & the audio loop](documentation/smoothing-and-the-audio-loop.md) | Zipper noise and `SmoothedValue`, loop order, raw pointers, denormals                          |
+| [State: save and restore](documentation/state-save-and-restore.md)          | What a host stores, `ValueTree` → XML → bytes, loading untrusted data safely                   |
+| [Identity & macOS](documentation/plugin-identity-and-macos.md)              | Bundle IDs, 4-character codes, `auval`, privacy permissions                                    |
+| [The editor (GUI)](documentation/editor-gui.md)                             | Components, the two-way `SliderAttachment`, member order, layout, testing a GUI with no screen |
+| **C++ foundations**                                                         |                                                                                                |
+| [Memory model](documentation/cpp-memory-model.md)                           | Stack vs heap, references vs pointers, RAII vs garbage collection                              |
+| [Build pipeline](documentation/cpp-build-pipeline.md)                       | Headers, preprocessor, compiling and linking, vs Roslyn and the CLR                            |
+| [CMake walkthrough](documentation/cmake-walkthrough.md)                     | `CMakeLists.txt` line by line, and why Debug builds matter for audio                           |
+| **Workflow**                                                                |                                                                                                |
+| [Dev tooling](documentation/dev-workflow-and-tooling.md)                    | CLion, CMake generators, Ninja, git submodules                                                 |
+| [Testing](documentation/testing.md)                                         | The automated tests, and how to hear it standalone and in a DAW                                |
+| [CI & GitHub Actions](documentation/ci-and-github-actions.md)               | What the pipeline does, and why the default template didn't work                               |
 
 If you have any suggestions or feedback, see [Contributing](#contributing).
 
@@ -175,7 +176,7 @@ built and run.
 - [x] Sample-accurate gain smoothing (no zipper noise) — biggest per-sample gain step down 960× in testing
 - [x] State save/restore — the gain survives closing and reopening a project, and corrupt data can't crash it
 - [x] Automated tests — `cmake --build build --target check`, run on every push
-- [ ] A real GUI (currently JUCE's generic editor)
+- [x] A real GUI — a resizable knob editor in the Maxximum Displacement brand look, two-way bound to the parameter, tested without a screen
 - [ ] Universal binary (Apple Silicon + Intel)
 
 <div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
@@ -205,9 +206,13 @@ no software is 100% perfect, but I strive to get as close as possible 🙂
 
 ## License
 
-SimpleGain's own source code is licensed under the [MIT License](LICENSE).
+Simply Gain's own source code is licensed under the [MIT License](LICENSE).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> **Fonts:** the plugin embeds [Inter](https://github.com/rsms/inter) and
+> [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), both under the SIL Open Font
+> License 1.1. Their licences are in [`assets/fonts/`](assets/fonts/).
 
 > **Note:** JUCE itself (vendored as a submodule at `libs/JUCE`) is **not** covered by this
 > licence — it's dual-licensed under AGPLv3 or Avid's commercial JUCE licence. See

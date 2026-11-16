@@ -27,7 +27,7 @@
 
   <!-- RIGHT: LIBRARY / PLUGIN -->
   <rect x="480" y="55" width="390" height="380" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
-  <text x="675" y="83" text-anchor="middle" font-size="15" font-weight="700" fill="#8250df">LIBRARY / PLUGIN  (SimpleGain)</text>
+  <text x="675" y="83" text-anchor="middle" font-size="15" font-weight="700" fill="#8250df">LIBRARY / PLUGIN  (Simply Gain)</text>
 
   <rect x="510" y="100" width="330" height="46" rx="6" fill="#ffffff" stroke="#d0d7de"/>
   <text x="675" y="129" text-anchor="middle" font-size="13" fill="#57606a">Operating system</text>

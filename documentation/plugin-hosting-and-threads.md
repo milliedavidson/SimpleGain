@@ -3,8 +3,8 @@
 How a DAW and a plugin relate: who calls whom, why the audio thread has rules the message
 thread doesn't, and what that has to do with dependency injection.
 
-**SimpleGain docs** · [Index](README.md)  
-**The plugin:** [Plan](plan.md) · **Hosting & threads** · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md)  
+**Simply Gain docs** · [Index](README.md)  
+**The plugin:** [Plan](plan.md) · **Hosting & threads** · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
 
@@ -37,17 +37,17 @@ that *something else* loads and calls. The library is passive; it waits to be us
 ![App vs library](images/app-vs-library.svg)
 
 A plugin is a library. Logic Pro is the app. Logic owns `main()`, owns the clock, owns the
-connection to your sound card. When you "load SimpleGain", Logic loads our compiled code into
+connection to your sound card. When you "load Simply Gain", Logic loads our compiled code into
 its own process and starts calling our functions.
 
 This pattern — *the framework calls you, rather than you calling the framework* — is called
 **inversion of control**, and you've met it in C#:
 
-| C# | Plugin |
-|---|---|
+| C#                                                         | Plugin                                                      |
+|------------------------------------------------------------|-------------------------------------------------------------|
 | You write a `Controller`; ASP.NET calls your action method | You write an `AudioProcessor`; the DAW calls `processBlock` |
-| You write `IHostedService.StartAsync`; the host calls it | You write `prepareToPlay`; the DAW calls it |
-| You never call `Main()` on ASP.NET | You never call `main()` on Logic |
+| You write `IHostedService.StartAsync`; the host calls it   | You write `prepareToPlay`; the DAW calls it                 |
+| You never call `Main()` on ASP.NET                         | You never call `main()` on Logic                            |
 
 ### "...except the framework calls you from a hard-real-time thread"
 
@@ -98,9 +98,9 @@ Same trade here. Building a correct DAW — audio drivers, sample-accurate mixin
 MIDI timing, an editable project format, undo history — is a multi-year, deeply specialised
 engineering effort. That's exactly why you can count the serious DAWs on two hands (Logic,
 Ableton, Cubase, Reaper, Pro Tools, Studio One, Bitwig, FL Studio…) while there are **thousands**
-of plugins. The DAW authors absorb the hard, shared problem once; every plugin author, including
+of plugins. The DAW authors absorb the hard, shared problem once. Every plugin author, including
 us, only has to implement a handful of lifecycle methods against a standard contract (VST3, AU,
-AAX) and gets audio, MIDI, automation, and a signal chain for free.
+AAX), and gets audio, MIDI, automation, and a signal chain for free.
 
 So: not laziness, and not really "easier" so much as *necessary*. There is no version of this
 where 200 independently-running plugin processes negotiate a shared sample-accurate clock among
@@ -126,10 +126,10 @@ You've used threads in C# constantly, often without naming them: every `await`, 
 
 Our plugin has (at least) two that matter:
 
-| Thread | Runs | Deadline | Analogy |
-|---|---|---|---|
+| Thread             | Runs                  | Deadline              | Analogy                    |
+|--------------------|-----------------------|-----------------------|----------------------------|
 | **Message thread** | GUI, clicks, repaints | ~16 ms (60 fps), soft | The WPF/WinForms UI thread |
-| **Audio thread** | `processBlock` | 10.7 ms, **hard** | Nothing in C#. Really. |
+| **Audio thread**   | `processBlock`        | 10.7 ms, **hard**     | Nothing in C#. Really.     |
 
 ### What "blocking" means — and it's the opposite of what I assumed
 
@@ -209,14 +209,14 @@ but tells the compiler "hands off".
 
 These are the ones that get people, because each is *completely normal* everywhere else:
 
-| What you'd naturally write | Why it breaks | What to do instead |
-|---|---|---|
-| `DBG("gain = " << g)` in `processBlock` to debug it | Logging does I/O and allocates. Adding the debug line *causes* the glitch you're debugging. | Store into an atomic, log from a `Timer` on the GUI thread |
-| `std::vector<float> temp(numSamples);` for scratch space | Heap allocation. Blocks. | Allocate once in `prepareToPlay`, reuse it |
-| `juce::String name = getParamName();` | `String` allocates | Never touch strings on the audio thread |
-| Editor reads a `std::vector` while audio resizes it | Reallocation invalidates the pointer the GUI is holding → crash | Atomics, or a lock-free FIFO |
-| `smoothedValue.reset(...)` from the GUI | Mutates state the audio thread is mid-read of | Set an atomic flag; the audio thread acts on it |
-| A meter that the audio thread pushes to the GUI | Backwards data flow needs the same care | Audio thread writes an atomic; GUI polls it on a timer |
+| What you'd naturally write                               | Why it breaks                                                                               | What to do instead                                         |
+|----------------------------------------------------------|---------------------------------------------------------------------------------------------|------------------------------------------------------------|
+| `DBG("gain = " << g)` in `processBlock` to debug it      | Logging does I/O and allocates. Adding the debug line *causes* the glitch you're debugging. | Store into an atomic, log from a `Timer` on the GUI thread |
+| `std::vector<float> temp(numSamples);` for scratch space | Heap allocation. Blocks.                                                                    | Allocate once in `prepareToPlay`, reuse it                 |
+| `juce::String name = getParamName();`                    | `String` allocates                                                                          | Never touch strings on the audio thread                    |
+| Editor reads a `std::vector` while audio resizes it      | Reallocation invalidates the pointer the GUI is holding → crash                             | Atomics, or a lock-free FIFO                               |
+| `smoothedValue.reset(...)` from the GUI                  | Mutates state the audio thread is mid-read of                                               | Set an atomic flag; the audio thread acts on it            |
+| A meter that the audio thread pushes to the GUI          | Backwards data flow needs the same care                                                     | Audio thread writes an atomic; GUI polls it on a timer     |
 
 Notice the shape: **it's never one dramatic mistake.** It's a debug line, a convenience
 `vector`, a string. That's why it's a *design constraint* — it informs every small decision,
@@ -228,7 +228,7 @@ not one big one.
   the main thread. JUCE enforces this.
 - **Audio threads: one or more.** A simple setup gives one. But a DAW may run *several* audio
   threads in parallel across CPU cores and hand different tracks to each. If ten instances of
-  SimpleGain are on ten tracks, they may genuinely be in `processBlock` **at the same time on
+  Simply Gain are on ten tracks, they may genuinely be in `processBlock` **at the same time on
   different cores**. Each instance is a separate object so that's fine — but any *shared*
   static or global state would be a disaster.
 - **Other threads exist too.** Look at the crash report: our app had a Timer thread, two
@@ -292,7 +292,7 @@ constructs it and *injects* it.
 
 ### Our plugin: inverted *call flow*
 
-SimpleGain inverts a different thing — **when your code runs at all**:
+Simply Gain inverts a different thing — **when your code runs at all**:
 
 ```csharp
 // An app: YOU call the framework
@@ -315,13 +315,13 @@ decide when anything happens.**
 
 ### The two side by side
 
-| | **DI container** (`IoC.cs`) | **Plugin architecture** (SimpleGain) |
-|---|---|---|
-| What's inverted | Who *constructs* your dependencies | Who *calls* your code, and when |
-| Who's in control | The container | The DAW |
-| You provide | A class with constructor parameters | A class implementing an interface |
-| The hook | Registration in `IoC.cs` | `createPluginFilter()`, which the host calls |
-| Also known as | Dependency Injection | The Hollywood Principle |
+|                  | **DI container** (`IoC.cs`)         | **Plugin architecture** (Simply Gain)        |
+|------------------|-------------------------------------|----------------------------------------------|
+| What's inverted  | Who *constructs* your dependencies  | Who *calls* your code, and when              |
+| Who's in control | The container                       | The DAW                                      |
+| You provide      | A class with constructor parameters | A class implementing an interface            |
+| The hook         | Registration in `IoC.cs`            | `createPluginFilter()`, which the host calls |
+| Also known as    | Dependency Injection                | The Hollywood Principle                      |
 
 > **Terminology note:** Martin Fowler coined "Dependency Injection" in 2004 *precisely because*
 > "IoC" had become too vague — everyone in the Java/.NET world was saying "IoC container" when
@@ -418,12 +418,12 @@ together that your ear reassembles them into a smooth sound.
 The DAW doesn't call you for each individual sample. It collects a few hundred and passes them
 over in one go, as a buffer:
 
-| Block size | Duration at 48 kHz |
-|---|---|
-| 64 samples | 1.3 ms |
-| 128 samples | 2.7 ms |
-| 256 samples | 5.3 ms |
-| 512 samples | 10.7 ms |
+| Block size  | Duration at 48 kHz |
+|-------------|--------------------|
+| 64 samples  | 1.3 ms             |
+| 128 samples | 2.7 ms             |
+| 256 samples | 5.3 ms             |
+| 512 samples | 10.7 ms            |
 
 So `processBlock` runs about **94 times a second** at a 512-sample block — not 48,000 times.
 
