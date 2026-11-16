@@ -433,7 +433,7 @@ editor holds a reference to the processor rather than owning it, and the message
 - **A snapshot mode** was added: `SimpleGain_Tests --snapshots <folder>` renders the editor to PNG
   files, which is how the pictures in the docs are made and how the layout was checked by eye.
 - **A custom `LookAndFeel`** makes the value text scale with the window (see
-  [The editor §9](editor-gui.md#9-a-look-and-feel-making-the-value-text-scale)). The test app now also
+  [The editor §9](editor-gui.md#9-a-look-and-feel-the-flat-knob-and-value-text-that-scales)). The test app now also
   fails if JUCE raises any debug assertion.
 - **Still needs a human:** open the Standalone, turn the knob, type a value, double-click to reset,
   drag the corner to resize, and check in a DAW that automation moves the knob.
