@@ -1,9 +1,9 @@
 # The Plan
 
-The phased build plan for SimpleGain, a JUCE 8 gain plugin. Concept explanations and
+The phased build plan for Simply Gain, a JUCE 8 gain plugin. Concept explanations and
 troubleshooting live in the sibling files below, cross-linked from wherever they came up.
 
-**SimpleGain docs** · [Index](README.md)  
+**Simply Gain docs** · [Index](README.md)  
 **The plugin:** **Plan** · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
@@ -424,7 +424,15 @@ editor holds a reference to the processor rather than owning it, and the message
 [The editor (GUI)](editor-gui.md). Where the build differs from the plan above:
 
 - **Written test-first**, with 16 tests that need no screen (8 passed and 10 failed against the old
-  generic editor, then all green). Twenty-two deliberate breakages of the editor were all caught.
+  generic editor, then all green). More tests came with the brand look below, so there are now 24.
+- **The window follows the Maxximum Displacement brand plan.** It has a flat near-black panel, a
+  slim apricot ring with the value in the middle, and an amber warm-up past 85% of the range. It
+  uses the brand fonts and the lockup `SIMPLY GAIN // maxximum displacement`. It opens at 480×320, the family's
+  smallest size (see [The editor §13](editor-gui.md#13-drawing-the-knob-the-brand-look)). An
+  earlier purple restyle, matching the README banner, was replaced by it.
+- **Renamed to Simply Gain** (`PRODUCT_NAME`), the name in the brand plan. The codes, the bundle
+  ID and the internal `SimpleGain` names are unchanged (see
+  [Identity & macOS §1](plugin-identity-and-macos.md#1-company_name-bundle_id-and-plugin_manufacturer_code--what-will-customers-see)).
 - **The knob turns like a real one.** First testing showed the up/down drag style felt broken, so a
   small `juce::Slider` subclass now follows the pointer round the arc, and a click never moves it
   (see [The editor §10](editor-gui.md#10-turning-the-knob-following-the-pointer-without-jumping)).
@@ -432,11 +440,12 @@ editor holds a reference to the processor rather than owning it, and the message
   copy would be redundant. The processor is passed in by reference and only used to build the attachment.
 - **A snapshot mode** was added: `SimpleGain_Tests --snapshots <folder>` renders the editor to PNG
   files, which is how the pictures in the docs are made and how the layout was checked by eye.
-- **A custom `LookAndFeel`** makes the value text scale with the window (see
-  [The editor §9](editor-gui.md#9-a-look-and-feel-the-flat-knob-and-value-text-that-scales)). The test app now also
-  fails if JUCE raises any debug assertion.
-- **Still needs a human:** open the Standalone, turn the knob, type a value, double-click to reset,
-  drag the corner to resize, and check in a DAW that automation moves the knob.
+- **A custom `LookAndFeel`** carries the embedded brand fonts and makes the value text scale with
+  the window (see [The editor §9](editor-gui.md#9-a-look-and-feel-the-brand-fonts-and-the-value-text)).
+  The test app now also fails if JUCE raises any debug assertion.
+- **Still needs a human.** In the Standalone: turn the knob, drag and click the number in the
+  middle, type a value, double-click the ring to reset, and drag the corner to resize. In a DAW:
+  check that automation moves the knob.
 
 ---
 

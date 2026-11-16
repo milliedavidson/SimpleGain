@@ -3,7 +3,7 @@
 How the plugin window is built. It covers what an editor is, how the knob is wired to the
 parameter in both directions, why member order matters, and how a GUI gets tested with no screen.
 
-**SimpleGain docs** · [Index](README.md)  
+**Simply Gain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · **The editor (GUI)**  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
@@ -26,14 +26,19 @@ parameter in both directions, why member order matters, and how a GUI gets teste
   slider. The look-and-feel goes *first*, so it outlives everything that uses it.
 - **`paint()` draws, `resized()` positions.** JUCE calls both; we never do. Every size is a
   fraction of the window, so the whole layout scales.
-- **The window resizes** between 75% and 200% of its opening size, always keeping its shape.
+- **The window is 480×320**, the plugin family's smallest size, and resizes up to 200%, always
+  keeping its 3:2 shape.
 - **The knob follows the pointer round its arc, but a click never moves it.** JUCE's styles do
-  one or the other, so a small subclass of `juce::Slider` adapts JUCE's circular style.
-- **A `LookAndFeel` is JUCE's theme.** Ours gives the knob its flat look (a slim ring with one
-  accent arc), puts the value in the middle and makes the text scale with its box. It's one
-  small class, and it has to be detached again in the destructor.
+  one or the other, so a small subclass of `juce::Slider` adapts JUCE's circular style. The number
+  in the middle is part of the knob: drag it to turn, click it to type.
+- **A `LookAndFeel` is JUCE's theme.** Ours carries the two brand fonts, draws the knob and puts
+  the value inside the ring. It has to be set *after* the children are added, and detached again in
+  the destructor.
+- **The look comes from the Maxximum Displacement brand plan**: a flat near-black panel, a slim
+  ring, one accent colour (apricot) and a big value in the middle. Past 85% of the range the arc
+  turns Volcanic Amber, the brand's colour for "approaching the limit".
 - **It's tested without a screen.** JUCE can build a component, lay it out and paint it into an
-  image in memory. 16 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
+  image in memory. 24 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
 - **Nothing permanent changed.** The parameter id, range and saved format are untouched; the
   editor only *reads and writes* the parameter.
 
@@ -51,8 +56,8 @@ An editor is a **`juce::Component`**. Everything visible in a JUCE app is one: w
 sliders, labels. Components nest, so the window is a tree:
 
 ```
-SimpleGainAudioProcessorEditor     (the window)
-├── titleLabel                     (a juce::Label)
+SimpleGainAudioProcessorEditor     (the window, which paints the background and the lockup)
+├── titleLabel                     (a juce::Label: SIMPLY GAIN)
 └── gainSlider                     (a juce::Slider, which owns its own value text box)
 ```
 
@@ -70,7 +75,7 @@ Two things differ from what a C# developer expects:
   shorter than the XAML would be, and it's what almost every plugin does.
 - **JUCE draws everything itself**, rather than asking the operating system for native buttons.
   That's why the plugin looks identical in Logic, Reaper and the Standalone app, and why we can
-  paint a gradient background and a custom-coloured knob with a few lines.
+  paint exact brand colours and our own knob with a few lines.
 
 ---
 
@@ -107,22 +112,29 @@ conversions; in C++ you opt out of them with `explicit`.
 ## 3. The knob and the title
 
 ```cpp
-RelativeRotarySlider gainSlider;        // a juce::Slider that turns like a real knob
-gainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 120, 28);
+titleLabel.setText (p.getName().toUpperCase(), juce::dontSendNotification);
+
+gainSlider.setComponentID ("gainSlider");
+gainSlider.setTitle ("Gain");
+gainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 0, 0);    // getSliderLayout() places it
 ```
 
+- **The title** is the product name in capitals. `getName()` returns `JucePlugin_Name`, which
+  CMake makes from `PRODUCT_NAME`, so the window, the host's plugin list and the bundle names can't
+  disagree. Renaming the plugin is one line in `CMakeLists.txt`.
 - **The knob** is a `juce::Slider` drawn as a rotary knob. You turn it by dragging round it, and
   how that works without the value jumping on a click is section 10.
-- **The text box** shows the value in the middle of the knob, and you click it to type a number.
-  The `false` means it's *not* read-only. The width and height are placeholders: the
-  look-and-feel decides where the box goes (section 9).
-- **Colours** are near-black greys with one warm apricot accent, set once in an anonymous
-  namespace at the top of `PluginEditor.cpp`. `setColour` takes an *ID* (such as
-  `rotarySliderFillColourId`) so each part can be styled separately.
+- **The text box** shows the value in the middle of the ring, and you click it to type a number.
+  The `false` means it's *not* read-only. "Below" and the two zeros don't matter: the look-and-feel
+  decides where the box goes (section 9).
+- **Colours** are the brand plan's tokens, set once in a `tokens` namespace at the top of
+  `PluginEditor.cpp`. `setColour` takes an *ID* (such as `textBoxTextColourId`) so each part can be
+  styled separately. The knob's own colours are used directly in its drawing code (section 13), so
+  they need no IDs.
 - **`setComponentID ("gainSlider")`** gives the knob a name the tests can look it up by,
   without needing access to the editor's private members.
 - **`setTitle ("Gain")`** is what a screen reader announces. It costs one line and makes the
-  knob usable by people who can't see it.
+  knob usable by people who can't see it. It's also the "GAIN" caption under the value.
 
 Nothing here says *what the knob's range is*, or what text it shows. That comes from the
 parameter, via the attachment in the next section.
@@ -178,7 +190,7 @@ The members are declared in this order:
 ```cpp
 SimpleGainLookAndFeel lookAndFeel;
 juce::Label titleLabel;
-juce::Slider gainSlider;
+RelativeRotarySlider gainSlider;
 juce::AudioProcessorValueTreeState::SliderAttachment gainAttachment;
 ```
 
@@ -210,11 +222,14 @@ member is safe to declare next to the thing it owns: the destructors run in a kn
 
 ---
 
-## 6. `paint()`: drawing the background
+## 6. `paint()`: drawing the background and the lockup
 
 ```cpp
-g.setGradientFill (juce::ColourGradient::vertical (backgroundTop, backgroundBottom, getLocalBounds()));
-g.fillAll();
+g.fillAll (tokens::base);
+
+g.setColour (tokens::muted);
+g.setFont (lookAndFeel.monoFont (height * 0.035f));
+g.drawText (titleLabel.getText() + brandLine, lockupArea, juce::Justification::centredLeft);
 ```
 
 JUCE calls `paint` whenever part of the window needs redrawing: the first time, after a resize,
@@ -222,51 +237,59 @@ after something moves. **We never call it ourselves.** To ask for a redraw you'd
 `repaint()`, which schedules one.
 
 `juce::Graphics` is the drawing context — WinForms' `Graphics`, or a WPF `DrawingContext`. The
-editor paints only the background, the small "GAIN" caption under the value and the credit line; **children paint themselves**, and
-JUCE draws them on top afterwards. The knob and title aren't drawn here.
+editor paints only the background and the lockup; **children paint themselves**, and JUCE draws
+them on top afterwards. The knob and title aren't drawn here.
+
+- **The background is flat**: one colour, Base (`#121417`), shared by every plugin in the family.
+  No gradient and no glow, as the brand plan asks.
+- **The lockup** is the brand line along the bottom left: `SIMPLY GAIN // maxximum displacement`.
+  The product name comes first in capitals, then the brand in lower case, all in the mono font
+  and the muted colour.
 
 `paint` can run many times a second while the window is dragged, so it should be cheap and
-shouldn't allocate much. Ours builds one gradient and one line of text.
-
-The credit line's font size is `getHeight() * 0.035f`, a fraction of the window, so it scales
-with everything else.
+shouldn't allocate much. Ours fills one colour and draws one line of text. The font size is
+`getHeight() * 0.035f`, a fraction of the window, so it scales with everything else.
 
 ---
 
 ## 7. `resized()`: layout by carving up a rectangle
 
-JUCE has no layout panels like WPF's `Grid` or `StackPanel`. The idiom is to hold a
-`juce::Rectangle` and **slice pieces off it**:
+JUCE has no layout panels like WPF's `Grid` or `StackPanel`. You work out each child's rectangle
+yourself. A common idiom is to hold a `juce::Rectangle` and **slice pieces off it** with
+`removeFromTop (n)`, which *returns* the top `n` pixels and shrinks the rectangle by that much.
+
+This window is simple enough to place things directly, as fractions of its height:
 
 ```cpp
-auto area = getLocalBounds().reduced (getWidth() / 12);          // margin all round
+const auto height = static_cast<float> (getHeight());
 
-titleLabel.setBounds (area.removeFromTop (windowHeight / 9));    // title strip
-area.removeFromBottom (windowHeight / 12);                       // room for the credit line
-gainSlider.setBounds (area);                                     // the knob gets what's left
+titleLabel.setBounds (juce::Rectangle<float> (0.0f, height * 0.05f, width, height * 0.1f).toNearestInt());
+
+const auto knobSize = height * 0.64f;
+gainSlider.setBounds (juce::Rectangle<float> (knobSize, knobSize).withCentre (centre).toNearestInt());
 ```
 
-`removeFromTop (n)` *returns* the top `n` pixels **and shrinks `area`** by that much, so each line
-takes its slice and the next sees what remains. `getLocalBounds()` is the component's own area
-with its top-left at (0, 0); `getBounds()` would be relative to its parent.
+- **The title** is a strip near the top, the full width, with its text centred.
+- **The knob** is a square, 64% of the height, centred in the window. The ring inside it ends up
+  about the same size, relative to the window, as in the brand plan's mock-up.
+- **The lockup** isn't a child, so it has no bounds. `paint()` draws it (section 6).
 
-JUCE calls `resized()` when the size first changes and on every later resize. Because every
-number is a **fraction of the window** (a twelfth, a ninth), the layout works at any size
-without special cases. Absolute pixel sizes would look right at one size and wrong at all the
-others.
+`getLocalBounds()` is the component's own area with its top-left at (0, 0); `getBounds()` would
+be relative to its parent. JUCE calls `resized()` when the size first changes and on every later
+resize. Because every number is a **fraction of the window**, the layout works at any size without
+special cases. Absolute pixel sizes would look right at one size and wrong at all the others.
 
-**Division is integer division** — `windowHeight / 9` drops the remainder. That's fine for pixel
-positions, but it's why we divide *last*: `defaultWidth * 3 / 4`, not `defaultWidth * 0.75`
-converted back. In C#, `int / int` behaves the same way, so this one will feel familiar.
+**Floats, then round once.** The sums are done in `float` and `toNearestInt()` rounds the finished
+rectangle to whole pixels. Rounding each part separately would let small errors add up.
 
-**Resizing rebuilds the value box.** `resized()` calls `gainSlider.setTextBoxStyle (...)` with new
-sizes. When a size changes, JUCE deletes the box's `Label` and creates a new one, so anything still
-pointing at the old label is left dangling. A test did exactly that, and crashed about one run in
-four (the story is in [Testing](testing.md#how-i-know-they-can-fail)). The rule: never keep a
-pointer to a child that JUCE owns across a call that might rebuild it. Look it up again, or use
-`juce::Component::SafePointer`, which becomes null when its component is deleted (like C#'s
-`WeakReference`). A side effect for users: typing in the box while the window is resized loses the
-edit, which is rare enough to live with.
+**Don't keep pointers to a child JUCE owns.** An earlier version called
+`gainSlider.setTextBoxStyle (...)` here with new sizes. When a size changes, JUCE deletes the
+box's `Label` and builds a new one, so anything still pointing at the old label is left dangling.
+A test did exactly that, and crashed about one run in four (the story is in
+[Testing](testing.md#how-i-know-they-can-fail)). The box is now placed by the look-and-feel
+instead, so resizing no longer rebuilds it. The rule still stands: look a JUCE-owned child up
+again, or use `juce::Component::SafePointer`, which becomes null when its component is deleted
+(like C#'s `WeakReference`).
 
 ---
 
@@ -274,55 +297,76 @@ edit, which is rare enough to live with.
 
 ```cpp
 setResizable (true, true);
-setResizeLimits (defaultWidth * 3 / 4, defaultHeight * 3 / 4, defaultWidth * 2, defaultHeight * 2);
+setResizeLimits (defaultWidth, defaultHeight, defaultWidth * 2, defaultHeight * 2);
 getConstrainer()->setFixedAspectRatio (static_cast<double> (defaultWidth) / defaultHeight);
 setSize (defaultWidth, defaultHeight);
 ```
 
 - `setResizable (true, true)` lets the *host* resize the window and also adds a small drag
-  handle in the bottom-right corner (the diagonal lines in the pictures).
-- **The limits** are 75% to 200% of the opening size: 255×330 up to 680×880. Smaller than that
-  and the text box stops being readable; larger is wasted on a single knob.
-- **The fixed aspect ratio** keeps the window the same shape. A free-form resize would give a
-  tall thin strip or a wide flat one, and the knob would have nowhere sensible to go.
+  handle in the bottom-right corner. The look-and-feel draws it quietly, in the track's colour,
+  brightening while the mouse is on it.
+- **480×320 is both the opening size and the smallest.** There's no standard size for a plugin
+  window: hosts accept whatever the plugin asks for. The brand plan picks 480×320 as the smallest
+  window for the whole family, so every plugin opens looking alike. Smaller than that and the text
+  stops being readable.
+- **The largest is 200%**, 960×640. Larger is wasted on a single knob.
+- **The fixed aspect ratio** keeps the window 3:2, like the plan's mock-ups. A free-form resize
+  would give a tall thin strip or a wide flat one, and the knob would have nowhere sensible to go.
 - **`static_cast<double>`** matters: `defaultWidth / defaultHeight` is *integer* division and
-  would give `0`. Casting one side first makes it a real division. (C# does the same with `int / int`, so
-  there too you'd cast one side.)
+  would give `1`, not 1.5. Casting one side first makes it a real division. (C# does the same with
+  `int / int`, so there too you'd cast one side.)
 - **`setSize` comes last**, after the limits are set, so the opening size is checked against
   them.
 
-![The smallest, opening and largest window sizes](images/editor-sizes.png)
+![The window at its smallest, 150% and largest sizes](images/editor-sizes.png)
 
 Not every host honours these limits (some plugin hosts fix the window size). The editor stays
 correct either way, because `resized()` copes with whatever size it's handed.
 
-The value text (`0.0 dB`) scales with the window too, which takes a custom look-and-feel:
-see the next section. Until that was added it stayed at JUCE's default 15 points at every size
-and looked tiny beside the knob at the largest window.
-
 ---
 
-## 9. A look-and-feel: the flat knob, and value text that scales
+## 9. A look-and-feel: the brand fonts and the value text
 
 JUCE draws every widget through a **`LookAndFeel`**: one object holding the drawing code for
 buttons, sliders, labels and so on, like a theme or a WPF `Style`/`ControlTemplate`. You change
 how something looks by subclassing `LookAndFeel_V4` (JUCE's modern default) and overriding only the
-parts you want. Ours overrides three functions. Two of them give the knob its flat look:
+parts you want. Everything we don't override keeps JUCE's default look.
 
-- **`drawRotarySlider`** strokes a slim grey track ring (2.5% of the knob's diameter, rounded
-  ends), then strokes the accent arc over it from the start of the sweep to the current value.
-  There's no face, tick marks, glow or thumb.
-- **`getSliderLayout`** makes the knob the biggest square that fits and centres the value box
-  inside it, so the number sits in the middle of the ring. The knob's own centre stays where the
-  drag maths in section 10 expects it.
+| Override              | What it does                                                       | Section |
+|-----------------------|--------------------------------------------------------------------|---------|
+| `getLabelFont`        | The value text in Inter, sized to its box                          | this    |
+| `createSliderTextBox` | Builds the value box so clicks pass through it to the knob         | 10      |
+| `getSliderLayout`     | Puts the value box in the middle of the ring                       | 13      |
+| `drawRotarySlider`    | Draws the track, the arc and the caption                           | 13      |
+| `drawCornerResizer`   | Draws the resize grip in the track's colour instead of bright grey | 8       |
 
-The third scales the value text:
+### The brand fonts, built into the plugin
+
+The brand plan uses **Inter** for text and **JetBrains Mono** for readouts and the brand line. A
+plugin can't rely on a font being installed on the user's machine, so both are compiled in.
+CMake's `juce_add_binary_data` turns each `.ttf` in `assets/fonts/` into a byte array in a
+generated `BinaryData` namespace:
+
+```cpp
+inter (juce::Typeface::createSystemTypefaceFor (BinaryData::InterRegular_ttf,
+                                                BinaryData::InterRegular_ttfSize))
+```
+
+`createSystemTypefaceFor` registers the font from memory and returns a `Typeface::Ptr`. That's a
+reference-counted pointer: the font lives as long as something points at it, much like a C#
+object reference. The look-and-feel keeps one for each font and hands out
+`juce::FontOptions (inter).withHeight (h)` wherever text is drawn.
+
+Both fonts are under the **SIL Open Font License**, which allows embedding them in software. The
+licence files sit beside the fonts in `assets/fonts/`.
+
+### The value text scales with its box
 
 ```cpp
 juce::Font SimpleGainLookAndFeel::getLabelFont (juce::Label& label)
 {
     if (dynamic_cast<juce::Slider*> (label.getParentComponent()) != nullptr)
-        return juce::FontOptions (static_cast<float> (label.getHeight()) * 0.5f);
+        return textFont (static_cast<float> (label.getHeight()) * 0.68f);
 
     return LookAndFeel_V4::getLabelFont (label);
 }
@@ -330,21 +374,25 @@ juce::Font SimpleGainLookAndFeel::getLabelFont (juce::Label& label)
 
 JUCE asks this every time it draws a label, and when a person starts typing into the box.
 
-- **The font is half the box's height.** The box height is already a fraction of the window
-  (section 7). So the text scales with the window *and can never overflow its box*, with no
-  separate font-size maths to keep in step with the layout.
+- **The font is a fixed share of the box's height.** The box is a fraction of the ring, which is a
+  fraction of the window. So the text scales with the window *and can never overflow its box*,
+  with no separate font-size maths to keep in step with the layout.
 - **It only touches the knob's box.** A slider's value box is a `Label` whose parent is the slider,
   which is what `dynamic_cast` checks. `dynamic_cast<Slider*>` is C++'s `as`: it gives the
   pointer back if the object really is that type and `nullptr` if not (C#: `label.Parent as Slider`).
   Every other label, including our title, falls through to the base class.
-- **The base class does the rest.** Everything we don't override keeps JUCE's default look.
 
-**Two rules come with a look-and-feel**, and the compiler enforces neither:
+### Three rules, and the compiler enforces none of them
 
 1. **It must outlive everything that uses it.** `setLookAndFeel (&lookAndFeel)` stores a *pointer*;
    the editor doesn't own it, and JUCE says so in the function's documentation. So the
    look-and-feel is a member declared first (section 5).
-2. **Detach it in the destructor.** `setLookAndFeel (nullptr)` runs while the children still exist.
+2. **Set it after the children are added.** Some widgets build their parts when they first get a
+   look-and-feel. The slider builds its value box with `createSliderTextBox`, and JUCE only
+   rebuilds it when the look-and-feel *changes*, not when the slider is added to a window. Set it
+   first and the knob keeps a box built by JUCE's default theme, which catches clicks. A test of
+   clicking the number found this.
+3. **Detach it in the destructor.** `setLookAndFeel (nullptr)` runs while the children still exist.
    Skip it and JUCE's own destructor assertion fires: *"you tried to delete a LookAndFeel while
    something is still using it"*. That assertion is only a log message in a Debug build, so by
    default no test fails. The test app therefore **counts JUCE assertions and fails the run if any
@@ -354,8 +402,6 @@ One of the deliberate breakages, declaring the look-and-feel *after* the slider,
 caught, and shouldn't be. With the detach in place, member order stops mattering, so that program is
 just as correct as the original. (This is called an equivalent mutant.) Both habits are kept anyway,
 because they cost nothing and either alone would catch a slip in the other.
-
-![The value text at three window sizes](images/editor-sizes.png)
 
 ---
 
@@ -420,6 +466,28 @@ so do we.
 `*lastPointerAngle` is `.Value`, and `reset()` is assigning `null`. Here, empty means "no grab has
 started yet".
 
+### The number in the middle
+
+The value sits inside the ring, so it covers the part of the knob people grab most. Left alone,
+the value box would catch those clicks and the knob would never see them. So the look-and-feel
+builds the box with `setInterceptsMouseClicks (false, true)`:
+
+- **`false`**: the box itself ignores clicks, so they fall through to the knob underneath. Dragging
+  the number turns the knob like anywhere else.
+- **`true`**: its children still take clicks. While you're typing, the box holds a `TextEditor`,
+  and that needs the mouse.
+
+The box no longer opens for typing by itself, so the knob does it. `mouseUp` checks for a plain
+click on the number, one with no drag, and calls `onNumberClicked`. That's a `std::function`, which
+by default calls JUCE's `showTextBox()`.
+
+**C# comparison.** `std::function<void()>` is an `Action` delegate. It's public so a test can swap
+in a counter: opening the box grabs the keyboard, which needs a real window on screen. JUCE's
+own `Button::onClick` works the same way.
+
+One side effect: a double-click on the number opens it for typing, because the first click already
+did. Double-click the ring to reset to 0 dB.
+
 ---
 
 ## 11. Wiring it in: `createEditor()`
@@ -448,40 +516,48 @@ the whole change. A test checks it hasn't been swapped back.
 ## 12. Testing a GUI with no screen
 
 A common assumption is that GUIs can't be tested automatically. They can, as far as *behaviour*
-goes, because a component doesn't need a window to exist. The 11 tests in
-`tests/EditorTests.cpp` (group **Editor**, 107 checks) create the real editor and drive it:
+goes, because a component doesn't need a window to exist. The 18 tests in
+`tests/EditorTests.cpp` (group **Editor**) create the real editor and drive it:
 
-| Test                                           | What it proves                                                                    |
-|------------------------------------------------|-----------------------------------------------------------------------------------|
-| The plugin offers its own editor               | `createEditor()` returns *our* editor, not JUCE's generic one                     |
-| Opens inside its resize limits                 | The opening size and aspect ratio are consistent with the constrainer             |
-| The knob starts at the fader's position        | A plugin reopened at −6 dB doesn't show 0                                         |
-| Turning the knob moves the parameter           | Knob → parameter, across the whole range                                          |
-| The host moves the parameter, the knob follows | Parameter → knob, across the whole range                                          |
-| The text box shows and accepts the right text  | `−6.0 dB` out, `-12`, `-12 dB` and `+4.5` in                                      |
-| Range and double-click reset                   | −60..+30 and a 0 dB reset                                                         |
-| Layout at every size                           | Nothing sticks out of the window at the minimum, opening and maximum sizes        |
-| The value text scales                          | It grows with the window, always fits its box, and the title's font is left alone |
-| It actually draws                              | The gradient and the knob are really in the image                                 |
-| Opening and closing                            | 50 open/close cycles, and the parameter moving while *no* editor exists           |
+| Test                                           | What it proves                                                                      |
+|------------------------------------------------|-------------------------------------------------------------------------------------|
+| The plugin offers its own editor               | `createEditor()` returns *our* editor, not JUCE's generic one                       |
+| Opens at 480×320 and grows to 200%             | The opening size, the limits and the 3:2 shape                                      |
+| The knob starts at the fader's position        | A plugin reopened at −6 dB doesn't show 0                                           |
+| Turning the knob moves the parameter           | Knob → parameter, across the whole range                                            |
+| The host moves the parameter, the knob follows | Parameter → knob, across the whole range                                            |
+| The text box shows and accepts the right text  | `−6.0 dB` out, `-12`, `-12 dB` and `+4.5` in                                        |
+| Range and double-click reset                   | −60..+30 and a 0 dB reset                                                           |
+| Layout at every size                           | Nothing sticks out of the window at the minimum, opening and maximum sizes          |
+| The value text scales                          | It grows with the window, always fits its box, and the title's font is left alone   |
+| It actually draws                              | A flat Base background, a quiet resize grip, and a knob that is really in the image |
+| The knob sweeps 1.2π to 2.8π                   | The gap at the bottom, as in the brand plan                                         |
+| The apricot arc                                | From the minimum to the value, over a dim track, and nothing in the gap             |
+| The ring is slim                               | Its stroke is 2.5% of the diameter                                                  |
+| The amber warm-up                              | Amber past 85% of the range, and not before                                         |
+| The knob is flat                               | No face, ticks, glow or thumb dot, inside or around the ring                        |
+| The value in the middle                        | Centred in the ring, with a muted caption beneath                                   |
+| Name and fonts                                 | SIMPLY GAIN in JetBrains Mono, the value in Inter, the lockup bottom left           |
+| Opening and closing                            | 50 open/close cycles, and the parameter moving while *no* editor exists             |
 
-The 5 tests in `tests/KnobDragTests.cpp` (group **Knob dragging**, 23 checks) send the knob the
-same mouse events JUCE would, from a fake mouse:
+The 6 tests in `tests/KnobDragTests.cpp` (group **Knob dragging**) send the knob the same mouse
+events JUCE would, from a fake mouse:
 
-| Test                 | What it proves                                                                            |
-|----------------------|-------------------------------------------------------------------------------------------|
-| Clicking never jumps | A click at either end, the top, the gap or the centre leaves the gain alone               |
-| Follows the pointer  | Dragging the dot round the arc lands on +15 dB, then back on −30 dB                       |
-| Grab anywhere        | Grabbing away from the dot and turning moves the gain by the angle turned                 |
-| Stops at the ends    | Turning ¾ of a circle past either end holds there, then turning back returns to the start |
-| One gesture per drag | The host sees exactly one gesture begin and one end, so automation records one move       |
+| Test                           | What it proves                                                                                    |
+|--------------------------------|---------------------------------------------------------------------------------------------------|
+| Clicking never jumps           | A click at either end, the top, the gap or the centre leaves the gain alone                       |
+| Follows the pointer            | Dragging the dot round the arc lands on +15 dB, then back on −30 dB                               |
+| Grab anywhere                  | Grabbing away from the dot and turning moves the gain by the angle turned                         |
+| Stops at the ends              | Turning ¾ of a circle past either end holds there, then turning back returns to the start         |
+| One gesture per drag           | The host sees exactly one gesture begin and one end, so automation records one move               |
+| The number is part of the knob | JUCE's own hit test sends a click on the number to the knob; dragging it turns, clicking it types |
 
 The tests were **written first**. Against the old generic editor, 8 tests passed and 10 failed; then the editor made them
-pass. The look-and-feel test was written the same way: it failed with the text stuck at 15 points,
-then passed. Afterwards the editor was deliberately broken in twenty-two ways to prove the tests notice, and
-all twenty-two were caught (see [Testing](testing.md#how-i-know-they-can-fail)). Some were only caught
-after I fixed the tests: an invisible knob slipped past the first "it draws" test, and forgetting
-to detach the look-and-feel was invisible until the test app began counting JUCE's assertions.
+pass. The brand look was done the same way: its tests failed against the earlier purple knob, then
+passed. The editor and knob have since been deliberately broken in forty-one ways to prove the tests notice
+(see [Testing](testing.md#how-i-know-they-can-fail)). Some were only caught after I fixed the
+tests: an invisible knob slipped past the first "it draws" test, and forgetting to detach the
+look-and-feel was invisible until the test app began counting JUCE's assertions.
 
 What they *can't* prove is that it looks good, or that the drag *feels* right in the hand. For that, there's a
 **snapshot mode**:
@@ -492,9 +568,135 @@ build/SimpleGain_Tests_artefacts/Debug/SimpleGain_Tests --snapshots some-folder
 ```
 
 It builds the editor in memory, calls `createComponentSnapshot`, and writes PNGs — the three
-pictures on this page come from it, so they show the real code, not a mock-up:
+pictures on this page come from it, so they show the real code, not a mock-up. At +24 dB the last
+stretch of the arc has turned amber:
 
 ![The same window with the gain at −30, −12.3 and +24 dB](images/editor-values.png)
 
-Still by hand: open the Standalone, turn the knob, type a value, double-click to reset, drag the
-corner, and in a DAW check that automation moves the knob. Those need ears and a mouse.
+Still by hand: open the Standalone, turn the knob, drag and click the number, type a value,
+double-click the ring to reset, drag the corner, and in a DAW check that automation moves the
+knob. Those need ears and a mouse.
+
+---
+
+## 13. Drawing the knob: the brand look
+
+The look comes from the Maxximum Displacement brand plan. Every plugin in the family is *"a flat,
+calm, near-black panel with a slim ring, one accent colour and a big value in the middle"*.
+Nothing about how the knob *behaves* changed when the look did. Dragging (section 10), the
+attachment (section 4) and their tests are untouched.
+
+### The colours are tokens
+
+The brand plan names a small set of colours, shared by every plugin, the games and the website.
+They're called **tokens**: a name for a job, with a value. Code says `tokens::line`, not
+`0xff2a2e34`, so the job is clear and a colour can change in one place.
+
+| Token   | Value     | Used for                                                          |
+|---------|-----------|-------------------------------------------------------------------|
+| Base    | `#121417` | The background                                                    |
+| Surface | `#1B1E22` | The value box while you're typing in it                           |
+| Line    | `#2A2E34` | The ring's track, and the resize grip                             |
+| Text    | `#E8EAED` | The value                                                         |
+| Muted   | `#8A9099` | The name at the top, the caption and the lockup                   |
+| Apricot | `#F2A766` | The arc. Simply Gain's own accent; no paid plugin uses it         |
+| Amber   | `#FF8A1F` | Volcanic Amber: the arc past 85%, meaning "approaching the limit" |
+
+### Where the drawing lives
+
+A slider paints itself by calling `drawRotarySlider` on its look-and-feel (section 9). We override
+it in `SimpleGainLookAndFeel`. It receives a `juce::Graphics&`, which plays the part of WPF's
+`DrawingContext` or WinForms' `Graphics`: you call `strokePath`, `fillPath` and `drawText`, and
+pixels appear.
+
+Painting is the painter's algorithm: whatever is drawn later covers what was drawn earlier.
+
+| Step | What        | How                                                                     |
+|------|-------------|-------------------------------------------------------------------------|
+| 1    | The track   | An arc in Line from the start to the end, leaving the gap at the bottom |
+| 2    | The arc     | The same arc from the start to the value, filled in apricot             |
+| 3    | The warm-up | The part of the arc past 85%, filled again in amber                     |
+| 4    | The caption | "GAIN" in small muted mono text, under the value                        |
+
+That's all. The plan's shape language is explicit: *"Flat. No face, ticks, glow or thumb dot."*
+The value text isn't drawn here: it's the slider's own value box, placed in the middle of the
+ring by `getSliderLayout`.
+
+### Angles, and the trap in `sliderPos`
+
+JUCE measures angles in radians, from 12 o'clock, going clockwise. The knob sweeps from 1.2π
+(about 7 o'clock) to 2.8π (about 5 o'clock), which is 288 degrees and JUCE's own default.
+`RelativeRotarySlider` sets it with `setRotaryParameters`.
+
+The look-and-feel is also handed `sliderPosProportional`. **That is a number from 0 to 1, not an
+angle.** The angle is `startAngle + proportion * (endAngle - startAngle)`. An earlier version used
+the proportion as if it were an angle, and the arc ran the wrong way round. The pixel tests caught
+it.
+
+Because the range isn't balanced around zero (60 dB of cut, 30 dB of boost), 0 dB sits two-thirds
+of the way round, at about half past one.
+
+### Everything is a fraction of one radius
+
+The ring's radius is 45% of the knob's area, so it scales with the window. Every other size is a
+fraction of that radius:
+
+| Part           | Size                    | Why                                            |
+|----------------|-------------------------|------------------------------------------------|
+| The ring       | 0.05 of the radius      | The plan's 2.5% of the diameter, rounded ends  |
+| The value text | about 0.3 of the radius | Big, but `−60.0 dB` still fits inside the ring |
+| The caption    | 0.1 of the radius       | Small and muted, letter-spaced                 |
+
+### The amber warm-up: painting the same shape twice
+
+The brand plan's signature idea is that the accent arc stays calm until a control passes about 85%
+of its range, then the extra stretch turns amber. For the gain range, 85% is +16.5 dB. The plan
+calls the 85% a placeholder, to tune by ear and eye.
+
+The arc has rounded ends, and the colour has to change at a clean line across it. Stroking two
+separate arcs would put a rounded end in the middle. So the arc is turned into one filled outline
+with `PathStrokeType::createStrokedPath`, and painted twice:
+
+1. The whole outline in apricot.
+2. The same outline in amber, with the drawing **clipped** to a pie slice that starts at the knee.
+
+```cpp
+const juce::Graphics::ScopedSaveState state (g);   // undoes the clip when it goes out of scope
+g.reduceClipRegion (pastTheKnee);
+g.setColour (tokens::amber);
+g.fillPath (outline);
+```
+
+A clip is a stencil: nothing outside it gets painted. `ScopedSaveState` remembers the drawing
+settings and puts them back when it goes out of scope, so the caption drawn afterwards isn't
+clipped too. That's RAII again (see [Memory model](cpp-memory-model.md)): the restore happens in a
+destructor, so it can't be forgotten. The nearest C# idea is a `using` block around an
+`IDisposable`, or `Graphics.Save` and `Restore` in WinForms.
+
+Apricot and amber are close, so the warm-up is subtle on Simply Gain. The plan accepts that:
+apricot marks the free plugin, and every paid plugin gets an accent well away from amber.
+
+### The value in the middle: `getSliderLayout`
+
+A slider asks its look-and-feel where to put things: the knob here, the text box there. Our
+override gives the knob the slider's whole area, and puts the text box in the middle of the ring,
+a little above centre so the caption fits beneath it.
+
+Everything that needs the knob's position asks that same function: the slider's painting, the
+drag code (section 10) and the tests. So nothing else needs to know the layout's numbers. The
+caption text is the slider's title, set by `setTitle ("Gain")` in section 3, shown in capitals.
+
+### Testing a look
+
+Seven tests, in the table in section 12, check the drawing by looking at pixels. They paint the
+editor into an image and walk along a line out from the knob's centre, at the angle they expect.
+
+- **Apricot and amber have the same hue.** Amber is far more saturated, so saturation tells them
+  apart: about 0.58 for apricot and 0.88 for amber.
+- **Only solid pixels count.** The edge of a shape is blended with the background, which makes it
+  darker and less saturated. Each test also asks for a bright pixel, so a blurred edge never
+  passes for the real colour.
+- **"Flat" is tested as "nothing there".** Inside the ring away from the text, and just outside
+  it, every pixel must be exactly Base. A face, a tick, a glow or a thumb dot would all fail that.
+
+They can't say whether it looks *good*. The snapshot pictures above are for that.

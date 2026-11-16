@@ -75,9 +75,9 @@ bool writeEditorSnapshots (const juce::File& directory)
                                  snapshot (24.0f,  defaultWidth, defaultHeight, 1.0f) }, 24),
                   directory.getChildFile ("editor-values.png"));
 
-    // The smallest, the opening and the largest size the window can be dragged to.
+    // The smallest (and opening) size, 150%, and the largest the window can be dragged to.
     ok &= savePng (sideBySide ({ snapshot (0.0f, limits->getMinimumWidth(), limits->getMinimumHeight(), 1.0f),
-                                 snapshot (0.0f, defaultWidth, defaultHeight, 1.0f),
+                                 snapshot (0.0f, defaultWidth * 3 / 2, defaultHeight * 3 / 2, 1.0f),
                                  snapshot (0.0f, limits->getMaximumWidth(), limits->getMaximumHeight(), 1.0f) }, 24),
                   directory.getChildFile ("editor-sizes.png"));
 

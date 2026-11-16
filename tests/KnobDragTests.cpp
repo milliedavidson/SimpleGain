@@ -78,6 +78,9 @@ namespace
         void moveTo (juce::Point<float> at) const    { knob.mouseDrag (event (at, true)); }
         void release (juce::Point<float> at) const   { knob.mouseUp (event (at, true)); }
 
+        /** Press and let go without moving: a plain click. */
+        void click (juce::Point<float> at)     { press (at); knob.mouseUp (event (at, false)); }
+
         /** Drags round the arc one degree at a time, as a hand would, recording the gain after each step. */
         std::vector<float> dragAround (const Arc& arc, double fromAngle, double toAngle,
                                        SimpleGainAudioProcessor& processor) const
@@ -114,6 +117,7 @@ namespace
             grabAnywhere();
             stopsAtTheEnds();
             oneGesturePerDrag();
+            theNumberIsPartOfTheKnob();
         }
 
         //======================================================================
@@ -263,6 +267,61 @@ namespace
             expectEquals (gestures.begins, 1, "gesture starts");
             expectEquals (gestures.ends, 1, "gesture ends");
             expectGreaterThan (gainDb (processor), 1.0f, "the drag didn't move the gain at all");
+        }
+
+        void theNumberIsPartOfTheKnob()
+        {
+            beginTest ("The number in the middle is part of the knob: drag it to turn, click it to type");
+
+            SimpleGainAudioProcessor processor;
+            setGainDb (processor, -12.3f);
+            SimpleGainAudioProcessorEditor editor (processor);
+            auto* knob = findKnob (editor);
+            if (knob == nullptr)
+                return expect (false, "no knob");
+
+            // A real click on the number, found the way JUCE finds it, reaches the knob, not the label.
+            const auto box = knob->getLookAndFeel().getSliderLayout (*knob).textBoxBounds;
+            const auto onTheNumber = box.getCentre().translated (-box.getWidth() / 4, 0);
+            editor.setVisible (true);       // JUCE only hit-tests visible components; no window is needed
+            expect (editor.getComponentAt (onTheNumber + knob->getPosition()) == knob, "a click on the number doesn't reach the knob");
+
+            // Grab the number and turn by the angle from -12.3 dB to 0 dB.
+            const Arc arc (*knob);
+            FakeMouse mouse { *knob, {} };
+            const auto grab = onTheNumber.toFloat();
+            const auto distance = grab.getDistanceFrom (arc.centre);
+            const auto grabAngle = std::atan2 (static_cast<double> (grab.x - arc.centre.x), static_cast<double> (arc.centre.y - grab.y));
+            const auto turn = arc.angleOf (*knob, 0.0) - arc.angleOf (*knob, -12.3);
+
+            mouse.press (grab);
+            for (int i = 1; i <= 90; ++i)
+                mouse.moveTo (arc.pointAt (grabAngle + turn * i / 90, distance));
+            mouse.release (arc.pointAt (grabAngle + turn, distance));
+            expectWithinAbsoluteError (static_cast<double> (gainDb (processor)), 0.0, dragTolerance, "dragging the number didn't turn the knob");
+
+            // Opening the box for typing grabs the keyboard, which needs a real window on screen,
+            // so count the requests instead of opening it.
+            auto* relative = dynamic_cast<RelativeRotarySlider*> (knob);
+            if (relative == nullptr)
+                return expect (false, "the knob isn't a RelativeRotarySlider");
+
+            expect (relative->onNumberClicked != nullptr, "a click on the number does nothing");
+            int openRequests = 0;
+            relative->onNumberClicked = [&openRequests] { ++openRequests; };
+
+            // A click on the number, without moving, opens it for typing and leaves the gain alone.
+            const auto before = gainDb (processor);
+            mouse.click (grab);
+            expectWithinAbsoluteError (gainDb (processor), before, 0.01f, "clicking the number moved the gain");
+            expectEquals (openRequests, 1, "clicking the number didn't open it for typing");
+
+            // A drag that starts on the number, or a click on the ring, doesn't.
+            mouse.press (grab);
+            mouse.moveTo (arc.pointAt (grabAngle + 0.3, distance));
+            mouse.release (arc.pointAt (grabAngle + 0.3, distance));
+            mouse.click (arc.pointAt (arc.angleOf (*knob, -30.0)));
+            expectEquals (openRequests, 1, "a drag from the number, or a click on the ring, opened it for typing");
         }
     };
 

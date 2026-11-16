@@ -19,29 +19,50 @@
 //==============================================================================
 /**
     A LookAndFeel is JUCE's "theme": one object that decides how widgets draw
-    themselves. Ours gives the knob a flat look: a slim ring with one accent arc,
-    and the value number big in the middle, scaling with the window.
-    -> documentation/editor-gui.md section 9
+    themselves. Ours carries the brand fonts, draws the knob (a slim ring with
+    the value in the middle) and puts the value box inside the ring.
+    -> documentation/editor-gui.md sections 9 and 13
 */
 class SimpleGainLookAndFeel final : public juce::LookAndFeel_V4
 {
 public:
+    SimpleGainLookAndFeel();
+
+    /** The brand's two fonts, at a height in pixels: Inter for text, JetBrains Mono for readouts. */
+    [[nodiscard]] juce::FontOptions textFont (float height) const;
+    [[nodiscard]] juce::FontOptions monoFont (float height) const;
+
+    /** The ring's radius (the middle of its stroke) for a knob drawn in `knobArea`. */
+    static float ringRadius (juce::Rectangle<float> knobArea);
+
     juce::Font getLabelFont (juce::Label&) override;
 
-    void drawRotarySlider (juce::Graphics&, int x, int y, int width, int height,
-                           float sliderPosProportional, float rotaryStartAngle,
-                           float rotaryEndAngle, juce::Slider&) override;
+    /** The value box, made so clicks pass through it to the knob. */
+    juce::Label* createSliderTextBox (juce::Slider&) override;
 
-    /** The knob is the biggest square that fits; the value box sits in its middle. */
+    /** The knob fills its whole area, and the value box sits in the middle of the ring. */
     juce::Slider::SliderLayout getSliderLayout (juce::Slider&) override;
+
+    /** The track, the arc (amber past the knee) and the caption under the value. */
+    void drawRotarySlider (juce::Graphics&, int x, int y, int width, int height, float sliderPosProportional,
+                           float rotaryStartAngle, float rotaryEndAngle, juce::Slider&) override;
+
+    /** The resize grip in the bottom-right corner, drawn quietly. */
+    void drawCornerResizer (juce::Graphics&, int width, int height, bool isMouseOver, bool isMouseDragging) override;
+
+private:
+    // Typeface::Ptr is reference-counted, like a C# object reference: the font data lives
+    // as long as something points at it.
+    juce::Typeface::Ptr inter, jetBrainsMono;
 };
 
 
 //==============================================================================
 /**
     A knob you turn by dragging round it, like a real one, but RELATIVELY: a click
-    on its own never changes the value, and the dot moves by the angle you turn.
+    on its own never changes the value, and the value moves by the angle you turn.
     (JUCE's own Rotary style jumps to wherever you click — +30 dB at one end.)
+    A plain click on the number in the middle opens it for typing.
     -> documentation/editor-gui.md section 10
 */
 class RelativeRotarySlider final : public juce::Slider
@@ -51,20 +72,24 @@ public:
 
     void mouseDown (const juce::MouseEvent&) override;
     void mouseDrag (const juce::MouseEvent&) override;
+    void mouseUp (const juce::MouseEvent&) override;
+
+    /** What a plain click on the number does: opens it for typing, unless a test swaps it out. */
+    std::function<void()> onNumberClicked;
 
 private:
-    /** The same event, turned round the knob's centre so the grab lines up with the dot. */
+    /** The same event, turned round the knob's centre so the grab lines up with the value. */
     juce::MouseEvent turnedToTheDot (const juce::MouseEvent&);
 
     // Like C#'s double?: empty until a grab has a pointer angle to start from.
     std::optional<double> lastPointerAngle;
-    double dotAngleUnlimited = 0.0;     // where the dot would be with no end stops
+    double dotAngleUnlimited = 0.0;     // where the value would be with no end stops
 };
 
 
 //==============================================================================
 /**
-    The window: a title, a gain knob and its value box.
+    The window: the name at the top, a gain knob, and the brand lockup.
 
     juce::AudioProcessorEditor is a juce::Component, JUCE's base class for
     anything drawable — roughly WPF's UIElement or WinForms' Control.
