@@ -3,7 +3,7 @@
 How the gain stops clicking: why a fader move becomes zipper noise, how `juce::SmoothedValue`
 fixes it, and the C++ you meet on the way — loop order, raw pointers, denormals and `float`.
 
-**SimpleGain docs** · [Index](README.md)  
+**Simply Gain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · **Smoothing & the audio loop** · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
@@ -256,7 +256,7 @@ A **denormal** (or *subnormal*) is a float closer to zero than the smallest "nor
 and many CPUs handle them through a slow path — dramatically slower than normal arithmetic.
 
 They appear where signals decay toward silence: reverb and filter tails, feedback loops, long
-fades. **SimpleGain's single multiply makes very few of its own**, so for this plugin it's
+fades. **Simply Gain's single multiply makes very few of its own**, so for this plugin it's
 mostly a defensive habit. But a plugin often receives them from whatever sits before it on the
 track, and it's the first thing to add once the DSP involves feedback.
 
@@ -313,7 +313,7 @@ what causes zipper noise — not how anything sounds. It isn't part of the repo.
 **Listening.** Zipper noise needs a **sustained, steady** signal to be audible; speech masks it.
 
 1. Build **Release** — see [CMake walkthrough §8](cmake-walkthrough.md#8-debug-vs-release--and-why-it-matters-for-audio).
-2. Put SimpleGain on a track in a DAW, looping a held pad or a sine tone. (Standalone works too,
+2. Put Simply Gain on a track in a DAW, looping a held pad or a sine tone. (Standalone works too,
    routed through BlackHole — [Testing](testing.md#1-how-do-you-actually-test-a-gain-plugin-standalone).)
 3. Drag the gain fader quickly. Phase 3 should sound stepped or gritty; Phase 4 should slide.
 

@@ -31,7 +31,7 @@
   <circle cx="1010" cy="150" r="150" fill="url(#glow)"/>
 
   <!-- wordmark -->
-  <text x="70" y="140" font-size="66" font-weight="800" fill="#f5f3ff" letter-spacing="-1">Simple<tspan fill="url(#accent)">Gain</tspan></text>
+  <text x="70" y="140" font-size="66" font-weight="800" fill="#f5f3ff" letter-spacing="-1">Simply <tspan fill="url(#accent)">Gain</tspan></text>
   <text x="72" y="178" font-size="20" fill="#c4b5fd" font-weight="500">A gain plugin, built from scratch while learning C++</text>
 
   <text x="72" y="222" font-size="14" fill="#9c8fc4">JUCE 8 &#183; CMake &#183; C++17 &#183; Standalone / AU / VST3</text>

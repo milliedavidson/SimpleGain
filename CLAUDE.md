@@ -2,7 +2,7 @@
 
 ## What this repo is
 
-**SimpleGain** — a volume/gain audio plugin (Standalone / AU / VST3) built from scratch with
+**Simply Gain** — a volume/gain audio plugin (Standalone / AU / VST3) built from scratch with
 JUCE 8 and CMake. See [README.md](README.md) for the full overview; this file is for how to
 *work* in the repo, not what it *is*.
 

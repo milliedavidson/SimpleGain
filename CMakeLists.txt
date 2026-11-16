@@ -1,5 +1,5 @@
 # =============================================================================
-#  SimpleGain — a volume plugin built with JUCE 8
+#  Simply Gain — a volume plugin built with JUCE 8
 #
 #  Comments are short on purpose: the line-by-line tour is in
 #  documentation/cmake-walkthrough.md. CMake is a generator — it reads this
@@ -43,19 +43,29 @@ juce_add_plugin(SimpleGain
     # without an Info.plist usage string.
     # -> documentation/plugin-identity-and-macos.md section 4
     MICROPHONE_PERMISSION_ENABLED   TRUE
-    MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear the plugin processing live sound."
+    MICROPHONE_PERMISSION_TEXT      "Simply Gain needs audio input so you can hear the plugin processing live sound."
     BLUETOOTH_PERMISSION_ENABLED    TRUE
-    BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
+    BLUETOOTH_PERMISSION_TEXT       "Simply Gain uses Bluetooth to discover wireless MIDI devices."
 
     FORMATS                     Standalone AU VST3   # AU is macOS-only
     COPY_PLUGIN_AFTER_BUILD     TRUE                 # installs into ~/Library/Audio/Plug-Ins
-    PRODUCT_NAME                "SimpleGain")
+    # The name hosts list and the bundles are called. The target and class names
+    # stay SimpleGain: they're internal. -> documentation/plugin-identity-and-macos.md section 1
+    PRODUCT_NAME                "Simply Gain")
 
 # Source files are listed explicitly — an unlisted .cpp is silently not built.
 target_sources(SimpleGain
     PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp)
+
+# The brand fonts, compiled into the plugin as byte arrays (BinaryData::...), so
+# it never depends on what's installed. Both are under the SIL Open Font License.
+# -> documentation/editor-gui.md section 9
+juce_add_binary_data(SimpleGain_Fonts
+    SOURCES
+        assets/fonts/Inter-Regular.ttf
+        assets/fonts/JetBrainsMono-Regular.ttf)
 
 # Build-time switches that remove JUCE features from the binary entirely.
 # JUCE_USE_CURL is Linux-only (a no-op on macOS); JUCE_VST3_CAN_REPLACE_VST2
@@ -72,6 +82,7 @@ target_compile_definitions(SimpleGain
 # -> documentation/cmake-walkthrough.md sections 7 and 8
 target_link_libraries(SimpleGain
     PRIVATE
+        SimpleGain_Fonts
         juce::juce_audio_utils
     PUBLIC
         juce::juce_recommended_config_flags
@@ -104,13 +115,14 @@ target_include_directories(SimpleGain_Tests PRIVATE Source tests)
 
 target_compile_definitions(SimpleGain_Tests
     PRIVATE
-        "JucePlugin_Name=\"SimpleGain\""   # normally supplied by juce_add_plugin
+        "JucePlugin_Name=\"Simply Gain\""  # normally supplied by juce_add_plugin
         JUCE_LOG_ASSERTIONS=1                # lets the tests filter JUCE's own assertion messages
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0)
 
 target_link_libraries(SimpleGain_Tests
     PRIVATE
+        SimpleGain_Fonts
         juce::juce_audio_utils
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)

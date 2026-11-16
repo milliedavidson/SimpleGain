@@ -1,9 +1,9 @@
 # =============================================================================
-#  Build & validate SimpleGain on every push and pull request.
+#  Build & validate Simply Gain on every push and pull request.
 # =============================================================================
 #  This replaces the auto-generated "C/C++ CI" starter, which assumed GNU
 #  Autotools (./configure && make) and a Linux runner — neither applies here.
-#  SimpleGain builds with CMake, and the AU format only exists on macOS, so
+#  Simply Gain builds with CMake, and the AU format only exists on macOS, so
 #  this workflow runs on a macOS runner and mirrors exactly what we do by
 #  hand locally: configure, build all three formats, then validate the AU
 #  with Apple's own auval — the same check Logic performs before it will
@@ -27,7 +27,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Check out SimpleGain (with the JUCE submodule)
+      - name: Check out Simply Gain (with the JUCE submodule)
         uses: actions/checkout@v7
         with:
           # JUCE is a git submodule, not committed code. Without this, the

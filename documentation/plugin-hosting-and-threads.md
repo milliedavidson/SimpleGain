@@ -3,7 +3,7 @@
 How a DAW and a plugin relate: who calls whom, why the audio thread has rules the message
 thread doesn't, and what that has to do with dependency injection.
 
-**SimpleGain docs** · [Index](README.md)  
+**Simply Gain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · **Hosting & threads** · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
@@ -37,7 +37,7 @@ that *something else* loads and calls. The library is passive; it waits to be us
 ![App vs library](images/app-vs-library.svg)
 
 A plugin is a library. Logic Pro is the app. Logic owns `main()`, owns the clock, owns the
-connection to your sound card. When you "load SimpleGain", Logic loads our compiled code into
+connection to your sound card. When you "load Simply Gain", Logic loads our compiled code into
 its own process and starts calling our functions.
 
 This pattern — *the framework calls you, rather than you calling the framework* — is called
@@ -228,7 +228,7 @@ not one big one.
   the main thread. JUCE enforces this.
 - **Audio threads: one or more.** A simple setup gives one. But a DAW may run *several* audio
   threads in parallel across CPU cores and hand different tracks to each. If ten instances of
-  SimpleGain are on ten tracks, they may genuinely be in `processBlock` **at the same time on
+  Simply Gain are on ten tracks, they may genuinely be in `processBlock` **at the same time on
   different cores**. Each instance is a separate object so that's fine — but any *shared*
   static or global state would be a disaster.
 - **Other threads exist too.** Look at the crash report: our app had a Timer thread, two
@@ -292,7 +292,7 @@ constructs it and *injects* it.
 
 ### Our plugin: inverted *call flow*
 
-SimpleGain inverts a different thing — **when your code runs at all**:
+Simply Gain inverts a different thing — **when your code runs at all**:
 
 ```csharp
 // An app: YOU call the framework
@@ -315,7 +315,7 @@ decide when anything happens.**
 
 ### The two side by side
 
-|                  | **DI container** (`IoC.cs`)         | **Plugin architecture** (SimpleGain)         |
+|                  | **DI container** (`IoC.cs`)         | **Plugin architecture** (Simply Gain)        |
 |------------------|-------------------------------------|----------------------------------------------|
 | What's inverted  | Who *constructs* your dependencies  | Who *calls* your code, and when              |
 | Who's in control | The container                       | The DAW                                      |

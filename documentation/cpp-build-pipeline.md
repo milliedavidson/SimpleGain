@@ -3,7 +3,7 @@
 What actually happens between writing `.cpp`/`.h` files and getting a runnable binary —
 the preprocessor, the compiler, the linker — and how that compares to Roslyn and the CLR.
 
-**SimpleGain docs** · [Index](README.md)  
+**Simply Gain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · **Build pipeline** · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
@@ -466,8 +466,8 @@ C++ has no IL/JIT step (§28), so a compiled binary targets **one specific CPU i
 Our build right now is:
 
 ```
-$ file build/.../SimpleGain
-SimpleGain: Mach-O 64-bit executable x86_64
+$ file "build/.../Simply Gain"
+Simply Gain: Mach-O 64-bit executable x86_64
 ```
 
 That binary will not run on an Apple Silicon Mac at all, because the instructions are different

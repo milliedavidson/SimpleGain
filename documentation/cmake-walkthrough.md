@@ -3,7 +3,7 @@
 A line-by-line tour of `CMakeLists.txt` — what each block does, why it's there, and which parts
 are permanent. The file itself keeps its comments short and points here.
 
-**SimpleGain docs** · [Index](README.md)  
+**Simply Gain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · **CMake walkthrough**  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
@@ -168,9 +168,9 @@ them to the host. Hosts generally prefer the latter.
 ```cmake
 juce_add_plugin(SimpleGain
     MICROPHONE_PERMISSION_ENABLED   TRUE
-    MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear..."
+    MICROPHONE_PERMISSION_TEXT      "Simply Gain needs audio input so you can hear..."
     BLUETOOTH_PERMISSION_ENABLED    TRUE
-    BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
+    BLUETOOTH_PERMISSION_TEXT       "Simply Gain uses Bluetooth to discover wireless MIDI devices."
     # ... more arguments
     )
 ```
@@ -185,7 +185,7 @@ host owns the microphone. Full story: [Identity & macOS §4](plugin-identity-and
 juce_add_plugin(SimpleGain
     FORMATS                     Standalone AU VST3
     COPY_PLUGIN_AFTER_BUILD     TRUE
-    PRODUCT_NAME                "SimpleGain"
+    PRODUCT_NAME                "Simply Gain"
     # ... more arguments
     )
 ```
@@ -198,7 +198,11 @@ every build, so your DAW finds them with no manual step. The catch is that **eve
 overwrites whatever your DAW loads**, including Debug builds (see §8).
 
 **`PRODUCT_NAME`** is the filename of the built plugin. The name the DAW displays is
-`PLUGIN_NAME`, which defaults to `PRODUCT_NAME`.
+`PLUGIN_NAME`, which defaults to `PRODUCT_NAME`. It can differ from the target's name, and here it
+does: the target is `SimpleGain`, a CMake identifier with no spaces, while the product is
+`Simply Gain`. So the targets and build folders keep `SimpleGain` (`SimpleGain_Standalone`,
+`build/SimpleGain_artefacts/`), and the bundles inside them are called `Simply Gain`. A name with a
+space needs quotes in a shell command.
 
 ---
 
@@ -403,7 +407,7 @@ code and the same compiler flags without untangling what the JUCE-generated targ
 ```cmake
 target_compile_definitions(SimpleGain_Tests
     PRIVATE
-        "JucePlugin_Name=\"SimpleGain\""
+        "JucePlugin_Name=\"Simply Gain\""
         JUCE_LOG_ASSERTIONS=1
         ...)
 ```

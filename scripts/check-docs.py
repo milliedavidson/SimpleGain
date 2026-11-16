@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that SimpleGain's documentation hangs together.
+"""Check that Simply Gain's documentation hangs together.
 
 Run it from anywhere:   python3 scripts/check-docs.py        (add --fix to re-align tables)
 Exit code 0 = all good, 1 = problems found (so CI can use it).
@@ -109,7 +109,7 @@ anchors = {
 MAX_SENTENCE_WORDS = 35          # CLion's grammar check starts flagging around 40; this leaves headroom
 FIX = "--fix" in sys.argv
 
-NAV_STARTS = ("**SimpleGain docs**", "**The plugin:**", "**C++ foundations:**", "**Workflow:**")
+NAV_STARTS = ("**Simply Gain docs**", "**The plugin:**", "**C++ foundations:**", "**Workflow:**")
 SEPARATOR = re.compile(r"^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$")
 
 
@@ -306,7 +306,7 @@ for p in docs:
     lines = p.read_text().split("\n")
     if "## In short" not in lines:
         problems.append(f"{p.name}: no 'In short' block")
-    start = next((i for i, l in enumerate(lines) if l.startswith("**SimpleGain docs**")), None)
+    start = next((i for i, l in enumerate(lines) if l.startswith("**Simply Gain docs**")), None)
     if start is None:
         problems.append(f"{p.name}: no nav line")
         continue

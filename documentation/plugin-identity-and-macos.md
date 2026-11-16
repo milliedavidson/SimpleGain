@@ -3,7 +3,7 @@
 Company name, bundle ID and manufacturer codes; `auval`; Pro Tools/AAX; and the TCC privacy
 crash that killed the standalone app on first launch.
 
-**SimpleGain docs** · [Index](README.md)  
+**Simply Gain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · **Identity & macOS** · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
@@ -54,6 +54,19 @@ crash that killed the standalone app on first launch.
 >
 > Changing the bundle ID makes macOS treat it as a brand-new app, so the microphone permission
 > is requested again on first launch. That's expected, not a regression.
+
+> ✅ **Renamed 2026-11-16.** `PRODUCT_NAME` is now **Simply Gain**, the name in the brand plan.
+> It's the name hosts list, and the bundles are called `Simply Gain.component`,
+> `Simply Gain.vst3` and `Simply Gain.app`. The window shows it in capitals.
+>
+> The CMake target, the class names and the bundle ID keep `SimpleGain`. Nobody sees them, and
+> the bundle ID is one of the permanent things. Hosts recognise the plugin by its codes (`Sgai`,
+> `Mxdp`), not its name, so a saved project still finds it.
+>
+> Two side effects. The Standalone keeps its settings in a file named after the product, so it
+> starts afresh at 0 dB and the old `SimpleGain.settings` can go. And the old `SimpleGain.component`
+> and `SimpleGain.vst3` bundles in `~/Library/Audio/Plug-Ins/` have to be removed, or the host
+> sees two plugins with the same codes.
 
 > ⚠️ **Change these before you ever share a build.** Once someone has your plugin installed, the
 > codes are its identity — changing them later makes the DAW treat it as a completely different
@@ -153,9 +166,9 @@ JUCE exposes these as `juce_add_plugin` options, so it's four lines in `CMakeLis
 ```cmake
 juce_add_plugin(SimpleGain
     MICROPHONE_PERMISSION_ENABLED   TRUE
-    MICROPHONE_PERMISSION_TEXT      "SimpleGain needs audio input so you can hear the plugin processing live sound."
+    MICROPHONE_PERMISSION_TEXT      "Simply Gain needs audio input so you can hear the plugin processing live sound."
     BLUETOOTH_PERMISSION_ENABLED    TRUE
-    BLUETOOTH_PERMISSION_TEXT       "SimpleGain uses Bluetooth to discover wireless MIDI devices."
+    BLUETOOTH_PERMISSION_TEXT       "Simply Gain uses Bluetooth to discover wireless MIDI devices."
     # ... more arguments
     )
 ```
@@ -163,7 +176,7 @@ juce_add_plugin(SimpleGain
 Verify it worked:
 
 ```bash
-plutil -p build/SimpleGain_artefacts/Debug/Standalone/SimpleGain.app/Contents/Info.plist | grep NS
+plutil -p "build/SimpleGain_artefacts/Debug/Standalone/Simply Gain.app/Contents/Info.plist" | grep NS
 ```
 
 **Only the Standalone needs this.** Inside a DAW, the *host* owns the microphone and has
@@ -188,5 +201,5 @@ normally does that), so to run one as an app JUCE provides a small host around i
 - saving your device choice between launches
 
 Everything in that screenshot — device dropdowns, sample rate, buffer size, Bluetooth MIDI
-button — is stock JUCE UI. Our own editor is the separate window that just says "SimpleGain".
+button — is stock JUCE UI. Our own editor is the separate window that says "SIMPLY GAIN".
 

@@ -4,7 +4,7 @@ What a pipeline actually is, what went wrong with GitHub's default C/C++ templat
 `git status` is telling CLion — the practical side of getting this repo checked automatically
 on every push.
 
-**SimpleGain docs** · [Index](README.md)  
+**Simply Gain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · **CI & GitHub Actions**
@@ -45,7 +45,7 @@ That's **GNU Autotools**, the build system most C/C++ projects used before CMake
 standard. A `./configure` script (generated ahead of time by `autoconf`, checked into the repo)
 inspects the local machine and writes out a `Makefile`, which `make` then reads.
 
-SimpleGain has neither `configure` nor `Makefile.am` — it's CMake. So the very first step fails
+Simply Gain has neither `configure` nor `Makefile.am` — it's CMake. So the very first step fails
 immediately:
 
 ```
@@ -84,7 +84,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Check out SimpleGain (with the JUCE submodule)
+      - name: Check out Simply Gain (with the JUCE submodule)
         uses: actions/checkout@v7
         with:
           submodules: recursive

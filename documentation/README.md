@@ -1,4 +1,4 @@
-# SimpleGain documentation
+# Simply Gain documentation
 
 Everything behind the code: how an audio plugin is structured, the C++ you need to read and
 write it, and the workflow around building and shipping one.

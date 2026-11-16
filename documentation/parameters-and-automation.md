@@ -3,7 +3,7 @@
 How a knob the user turns becomes a number the audio thread can safely read — and how the host
 learns what that number means.
 
-**SimpleGain docs** · [Index](README.md)  
+**Simply Gain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · **Parameters & automation** · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · [Identity & macOS](plugin-identity-and-macos.md) · [The editor (GUI)](editor-gui.md)  
 **C++ foundations:** [Memory model](cpp-memory-model.md) · [Build pipeline](cpp-build-pipeline.md) · [CMake walkthrough](cmake-walkthrough.md)  
 **Workflow:** [Dev tooling](dev-workflow-and-tooling.md) · [Testing](testing.md) · [CI & GitHub Actions](ci-and-github-actions.md)
@@ -150,7 +150,7 @@ The current range is **−60 dB to +30 dB**, matching Logic's own Gain plugin. F
 | Logic Gain             | ±30 dB            |
 | Ableton Utility        | −∞ to +35 dB      |
 | Typical "trim" utility | ±24 dB            |
-| **SimpleGain**         | **−60 to +30 dB** |
+| **Simply Gain**        | **−60 to +30 dB** |
 
 +30 dB is a multiplier of **31.6×**, which is a lot — enough to rescue a quietly-recorded take
 or a low-output ribbon mic.
