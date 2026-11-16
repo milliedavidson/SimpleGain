@@ -424,14 +424,18 @@ editor holds a reference to the processor rather than owning it, and the message
 [The editor (GUI)](editor-gui.md). Where the build differs from the plan above:
 
 - **Written test-first**, with 16 tests that need no screen (8 passed and 10 failed against the old
-  generic editor, then all green). More tests came with the brand look and the fine number drag below,
-  so there are now 27.
+  generic editor, then all green). More tests came with the brand look, the fine number drag and the
+  logo below, so there are now 34.
 - **The window follows the Maxximum Displacement brand plan.** It has a flat near-black panel, a
   slim apricot ring with the value in the middle, and an amber warm-up past 85% of the range. It
   uses the brand fonts and the lockup `SIMPLY GAIN // maxximum displacement`. It opens at 480×320, the family's
   smallest size (see [The editor §13](editor-gui.md#13-drawing-the-knob-the-brand-look)). An
   earlier purple restyle was replaced by it, and the README banner now matches.
-- **Renamed to Simply Gain** (`PRODUCT_NAME`), the name in the brand plan. The codes, the bundle
+- **Logo, colours and the limit readout.** The title is drawn like the brand logo, in Sora Bold
+  with a growing wave, and the ring mark sits top left. The arc is lighter at the quiet end and a
+  deep red-orange in its last 5%, where *Approaching the limit.* fades in (see
+  [The editor §14](editor-gui.md#14-the-logo-the-ring-mark-and-the-limit-readout)).
+- **Renamed to simply gain** (`PRODUCT_NAME`), the name in the brand plan, in lower case like the logo. The codes, the bundle
   ID and the internal `SimpleGain` names are unchanged (see
   [Identity & macOS §1](plugin-identity-and-macos.md#1-company_name-bundle_id-and-plugin_manufacturer_code--what-will-customers-see)).
 - **The knob turns like a real one.** First testing showed the up/down drag style felt broken, so a
@@ -446,7 +450,8 @@ editor holds a reference to the processor rather than owning it, and the message
   the window (see [The editor §9](editor-gui.md#9-a-look-and-feel-the-brand-fonts-and-the-value-text)).
   The test app now also fails if JUCE raises any debug assertion.
 - **Still needs a human.** In the Standalone: turn the knob, drag the number in the middle up and
-  down, click it and type a value, double-click the ring to reset, and drag the corner to resize. In a DAW:
+  down, click it and type a value, double-click the ring to reset, and drag the corner to resize.
+  Turn past +25.5 dB and back to watch the readout fade. In a DAW:
   check that automation moves the knob.
 
 ---
@@ -478,6 +483,11 @@ Only if she wants to keep going after a working plugin:
 - **Universal binary** (`CMAKE_OSX_ARCHITECTURES "x86_64;arm64"`) so it runs on Apple Silicon
   too — relevant since this is an Intel Mac and most users aren't
 - A `Release` build and notes on what code signing would involve for distribution
+
+**Status (2026-11-16): the last two are done.** `scripts/package-mac.sh` builds a universal Release
+zip for macOS 11 and later, signed ad hoc. What a signed, notarised installer would need is in
+[Identity & macOS §6](plugin-identity-and-macos.md#6-sending-it-to-someone-universal-builds-signing-and-gatekeeper).
+The bypass and the meter haven't been started.
 
 ---
 

@@ -69,10 +69,10 @@ bool writeEditorSnapshots (const juce::File& directory)
     // One sharp picture at the opening size.
     ok &= savePng (snapshot (0.0f, defaultWidth, defaultHeight, 2.0f), directory.getChildFile ("editor-default.png"));
 
-    // The same window with the fader in three different places.
+    // The same window quiet, in the amber, and in the red with the limit readout showing.
     ok &= savePng (sideBySide ({ snapshot (-30.0f, defaultWidth, defaultHeight, 1.0f),
-                                 snapshot (-12.3f, defaultWidth, defaultHeight, 1.0f),
-                                 snapshot (24.0f,  defaultWidth, defaultHeight, 1.0f) }, 24),
+                                 snapshot (20.0f,  defaultWidth, defaultHeight, 1.0f),
+                                 snapshot (28.0f,  defaultWidth, defaultHeight, 1.0f) }, 24),
                   directory.getChildFile ("editor-values.png"));
 
     // The smallest (and opening) size, 150%, and the largest the window can be dragged to.

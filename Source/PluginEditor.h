@@ -28,9 +28,11 @@ class SimpleGainLookAndFeel final : public juce::LookAndFeel_V4
 public:
     SimpleGainLookAndFeel();
 
-    /** The brand's two fonts, at a height in pixels: Inter for text, JetBrains Mono for readouts. */
+    /** The brand's fonts, at a height in pixels: Inter for text, JetBrains Mono for readouts,
+        and Sora Bold for the logo. */
     [[nodiscard]] juce::FontOptions textFont (float height) const;
     [[nodiscard]] juce::FontOptions monoFont (float height) const;
+    [[nodiscard]] juce::FontOptions logoFont (float height) const;
 
     /** The ring's radius (the middle of its stroke) for a knob drawn in `knobArea`. */
     static float ringRadius (juce::Rectangle<float> knobArea);
@@ -43,7 +45,7 @@ public:
     /** The knob fills its whole area, and the value box sits in the middle of the ring. */
     juce::Slider::SliderLayout getSliderLayout (juce::Slider&) override;
 
-    /** The track, the arc (amber past the knee) and the caption under the value. */
+    /** The track, the arc (quiet, apricot, amber, then ember) and the caption under the value. */
     void drawRotarySlider (juce::Graphics&, int x, int y, int width, int height, float sliderPosProportional,
                            float rotaryStartAngle, float rotaryEndAngle, juce::Slider&) override;
 
@@ -53,7 +55,68 @@ public:
 private:
     // Typeface::Ptr is reference-counted, like a C# object reference: the font data lives
     // as long as something points at it.
-    juce::Typeface::Ptr inter, jetBrainsMono;
+    juce::Typeface::Ptr inter, jetBrainsMono, sora;
+};
+
+
+//==============================================================================
+/**
+    The plugin's name drawn like the brand logo: lower case in Sora Bold, with a
+    sound wave under it that grows until its last crest knocks the final letter up.
+    -> documentation/editor-gui.md section 14
+*/
+class Wordmark final : public juce::Component
+{
+public:
+    explicit Wordmark (const SimpleGainLookAndFeel&);
+
+    void setText (const juce::String&);
+    [[nodiscard]] const juce::String& getText() const noexcept   { return text; }
+    [[nodiscard]] juce::Font getFont() const;
+
+    /** Where letter `index` is drawn, the knocked-up last one included. */
+    [[nodiscard]] juce::Rectangle<float> letterBounds (int index) const;
+
+    void paint (juce::Graphics&) override;
+
+private:
+    [[nodiscard]] juce::GlyphArrangement layOut() const;
+    [[nodiscard]] juce::AffineTransform knockUp (const juce::PositionedGlyph&) const;
+    [[nodiscard]] juce::Path wave (const juce::GlyphArrangement&) const;
+
+    const SimpleGainLookAndFeel& lookAndFeel;     // a reference: the editor owns it, and outlives this
+    juce::String text;
+};
+
+
+//==============================================================================
+/**
+    A label that fades in and out instead of snapping on and off. A timer moves
+    the fade along; a test can call advance() itself.
+    -> documentation/editor-gui.md section 14
+*/
+class FadingLabel final : public juce::Label, private juce::Timer
+{
+public:
+    FadingLabel();
+
+    /** Starts fading in or out from wherever it is now. */
+    void fadeTo (bool shouldShow);
+
+    /** Shows or hides it at once: for when the window opens. */
+    void showNow (bool shouldShow);
+
+    /** Moves the fade on by `seconds`. */
+    void advance (double seconds);
+
+    static constexpr double fadeSeconds = 0.35;
+
+private:
+    void timerCallback() override;
+    void applyProgress();
+
+    double progress = 0.0, target = 0.0;    // 0 hidden, 1 shown; the alpha eases between them
+    double lastTickMs = 0.0;
 };
 
 
@@ -98,7 +161,8 @@ private:
 
 //==============================================================================
 /**
-    The window: the name at the top, a gain knob, and the brand lockup.
+    The window: the ring mark and the name at the top, a gain knob, the limit
+    readout under it, and the brand lockup.
 
     juce::AudioProcessorEditor is a juce::Component, JUCE's base class for
     anything drawable — roughly WPF's UIElement or WinForms' Control.
@@ -127,9 +191,13 @@ private:
     // first), and the attachment's destructor touches the slider (so it is last).
     // -> documentation/editor-gui.md section 5
     SimpleGainLookAndFeel lookAndFeel;
-    juce::Label titleLabel;
+    Wordmark title { lookAndFeel };
     RelativeRotarySlider gainSlider;
+    FadingLabel limitReadout;
     juce::AudioProcessorValueTreeState::SliderAttachment gainAttachment;
+
+    /** Is the knob past the start of the ember, the last stretch before the limit? */
+    [[nodiscard]] bool isInTheRed();      // not const: JUCE's valueToProportionOfLength() isn't
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleGainAudioProcessorEditor)
 };

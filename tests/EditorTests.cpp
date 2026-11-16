@@ -56,9 +56,9 @@ namespace
     }
 
     //==========================================================================
-    // Colours from the brand plan, and tests that tell them apart in a picture. Apricot and amber
-    // share a hue, so saturation separates them. Each test also needs a bright, solid pixel, so
-    // the blurred edge of a shape (part colour, part background) never counts.
+    // Colours from the brand plan, and tests that tell them apart in a picture. Quiet, apricot and
+    // amber share a hue, so saturation separates them; ember is redder. Each test also needs a
+    // bright, solid pixel, so the blurred edge of a shape (part colour, part background) never counts.
     const juce::Colour base { 0xff121417 };
 
     bool isBase (const juce::Colour c)
@@ -68,7 +68,10 @@ namespace
     }
 
     bool looksApricot (const juce::Colour c)    { return c.getSaturation() > 0.45f && c.getSaturation() < 0.72f && c.getBrightness() > 0.75f; }
-    bool looksAmber (const juce::Colour c)      { return c.getSaturation() > 0.8f && c.getBrightness() > 0.75f; }
+    bool looksAmber (const juce::Colour c)      { return c.getHue() > 0.06f && c.getHue() < 0.12f && c.getSaturation() > 0.8f && c.getBrightness() > 0.75f; }
+    bool looksEmber (const juce::Colour c)      { return (c.getHue() < 0.05f || c.getHue() > 0.97f) && c.getSaturation() > 0.7f && c.getBrightness() > 0.6f; }
+    bool looksQuiet (const juce::Colour c)      { return c.getHue() > 0.05f && c.getHue() < 0.12f && c.getSaturation() > 0.15f && c.getSaturation() < 0.42f && c.getBrightness() > 0.85f; }
+    bool looksWarm (const juce::Colour c)       { return looksQuiet (c) || looksApricot (c); }
     bool looksTrack (const juce::Colour c)      { return c.getSaturation() < 0.35f && c.getBrightness() > 0.15f && c.getBrightness() < 0.3f; }
     bool isDrawnOn (const juce::Colour c)       { return ! isBase (c); }
 
@@ -102,6 +105,13 @@ namespace
             return false;
         }
 
+        /** The colour in the middle of the ring's stroke at `angle`. */
+        [[nodiscard]] juce::Colour colourOnRing (const float angle) const
+        {
+            const auto p = centre.getPointOnCircumference (radius, angle);
+            return image.getPixelAt (juce::roundToInt (p.x), juce::roundToInt (p.y));
+        }
+
         /** On the ring itself, give or take a little either side of its stroke. */
         template <typename Test>
         [[nodiscard]] bool onRing (const float angle, Test test) const
@@ -118,6 +128,17 @@ namespace
                         ++count;
 
             return count;
+        }
+
+        /** How many rows of `area` have anything drawn in them. */
+        [[nodiscard]] int drawnRowsIn (const juce::Rectangle<int> area) const
+        {
+            int rows = 0;
+            for (int y = area.getY(); y < area.getBottom(); ++y)
+                if (drawnPixelsIn ({ area.getX(), y, area.getWidth(), 1 }) > 0)
+                    ++rows;
+
+            return rows;
         }
 
         [[nodiscard]] float brightestIn (const juce::Rectangle<int> area) const
@@ -145,6 +166,10 @@ namespace
         const auto layout = knob->getLookAndFeel().getSliderLayout (*knob);
         const auto rotary = knob->getRotaryParameters();
         const auto offset = knob->getPosition();
+
+        // Just the knob's own drawing: the limit readout below it has tests of its own.
+        if (auto* readout = editor.findChildWithID ("limitReadout"))
+            readout->setVisible (false);
 
         picture.image = editor.createComponentSnapshot (editor.getLocalBounds());
         picture.centre = (layout.sliderBounds.getCentre() + offset).toFloat();
@@ -174,10 +199,17 @@ namespace
             knobSweep();
             knobArc();
             slimRing();
+            quietEnd();
+            coloursBlend();
             amberWarmUp();
+            emberAtTheLimit();
+            limitReadout();
             flatKnob();
             valueInTheMiddle();
+            readableCaption();
             nameAndFonts();
+            wordmark();
+            ringMark();
             openingAndClosing();
         }
 
@@ -361,12 +393,12 @@ namespace
             // The window is twice as tall at its largest as at its smallest, so the text should grow by about that much.
             expectGreaterThan (largest, smallest * 1.6f, "the value text doesn't scale with the window");
 
-            // The look-and-feel is only meant for the knob's value box: the title keeps the font it was given.
-            if (auto* title = dynamic_cast<juce::Label*> (editor.getChildComponent (0)))
-                expectWithinAbsoluteError (valueTextHeight (*title), title->getFont().getHeight(), 0.01f,
-                                           "the title's font was changed by the look-and-feel");
+            // The look-and-feel is only meant for the knob's value box: the readout keeps the font it was given.
+            if (auto* readout = dynamic_cast<juce::Label*> (editor.findChildWithID ("limitReadout")))
+                expectWithinAbsoluteError (valueTextHeight (*readout), readout->getFont().getHeight(), 0.01f,
+                                           "the readout's font was changed by the look-and-feel");
             else
-                expect (false, "the editor's first child isn't the title label");
+                expect (false, "no limit readout label");
         }
 
         void drawsSomething()
@@ -432,7 +464,7 @@ namespace
 
         void knobArc()
         {
-            beginTest ("The apricot arc runs from the minimum to the value, over a dim track, with nothing in the gap");
+            beginTest ("The arc runs from the minimum to the value, over a dim track, with nothing in the gap");
 
             const auto atMinimum = pictureAt (-60.0f);
             const auto atUnity   = pictureAt (0.0f);        // two-thirds of the way round: about 1:30
@@ -446,13 +478,13 @@ namespace
             for (const float degrees : { -90.0f, 0.0f, 90.0f })
             {
                 const auto where = juce::String (degrees) + " degrees";
-                expect (! atMinimum.onRing (at (degrees), looksApricot), "arc drawn at " + where + " at minimum gain");
+                expect (! atMinimum.onRing (at (degrees), looksWarm), "arc drawn at " + where + " at minimum gain");
                 expect (atMinimum.onRing (at (degrees), looksTrack), "no track at " + where + " at minimum gain");
-                expect (atMaximum.onRing (at (degrees), looksApricot), "arc missing at " + where + " at maximum gain");
+                expect (atMaximum.onRing (at (degrees), looksWarm), "arc missing at " + where + " at maximum gain");
             }
 
-            expect (atUnity.onRing (at (-90.0f), looksApricot) && atUnity.onRing (at (0.0f), looksApricot), "arc missing before the value at 0 dB");
-            expect (! atUnity.onRing (at (90.0f), looksApricot), "arc runs past the value at 0 dB");
+            expect (atUnity.onRing (at (-90.0f), looksWarm) && atUnity.onRing (at (0.0f), looksWarm), "arc missing before the value at 0 dB");
+            expect (! atUnity.onRing (at (90.0f), looksWarm), "arc runs past the value at 0 dB");
             expect (atUnity.onRing (at (90.0f), looksTrack), "no track after the value at 0 dB");
 
             // The gap at the bottom stays empty: no track, no arc, at any gain.
@@ -481,24 +513,146 @@ namespace
 
         void amberWarmUp()
         {
-            beginTest ("Past 85% of the range the arc turns Volcanic Amber, and not before");
+            beginTest ("Around 85% of the range the arc warms to Volcanic Amber, and not before");
 
             const auto at10 = pictureAt (10.0f);            // 78% of the way round
-            const auto at20 = pictureAt (20.0f);            // 89%
+            const auto at22 = pictureAt (22.0f);            // 91%
             const auto at30 = pictureAt (30.0f);            // 100%
 
-            if (at10.radius <= 0.0f || at20.radius <= 0.0f || at30.radius <= 0.0f)
+            if (at10.radius <= 0.0f || at22.radius <= 0.0f || at30.radius <= 0.0f)
                 return expect (false, "no knob");
 
             for (float proportion = 0.0f; proportion <= 1.0f; proportion += 0.02f)
                 expect (! at10.onRing (at10.angleAt (proportion), looksAmber), "amber at +10 dB, below the knee");
 
-            expect (at20.onRing (at20.angleAt (0.8f), looksApricot), "not apricot below the knee at +20 dB");
-            expect (at20.onRing (at20.angleAt (0.87f), looksAmber), "not amber just past the knee at +20 dB");
-            expect (! at20.onRing (at20.angleAt (0.8f), looksAmber), "amber below the knee at +20 dB");
+            expect (at22.onRing (at22.angleAt (0.8f), looksApricot), "not apricot below the knee at +22 dB");
+            expect (at22.onRing (at22.angleAt (0.9f), looksAmber), "not amber past the knee at +22 dB");
+            expect (! at22.onRing (at22.angleAt (0.8f), looksAmber), "amber below the knee at +22 dB");
 
             expect (at30.onRing (at30.angleAt (0.5f), looksApricot), "not apricot half-way at +30 dB");
-            expect (at30.onRing (at30.angleAt (0.95f), looksAmber), "not amber near the end at +30 dB");
+            expect (at30.onRing (at30.angleAt (0.9f), looksAmber), "not amber between the knee and the red at +30 dB");
+        }
+
+        void quietEnd()
+        {
+            beginTest ("The low end of the arc is a lighter, quieter apricot that blends into apricot by the middle");
+
+            const auto picture = pictureAt (30.0f);
+            if (picture.radius <= 0.0f)
+                return expect (false, "no knob");
+
+            const auto start = picture.colourOnRing (picture.angleAt (0.03f));
+            const auto blend = picture.colourOnRing (picture.angleAt (0.25f));
+            const auto middle = picture.colourOnRing (picture.angleAt (0.6f));
+
+            expect (looksQuiet (start), "the start of the arc isn't the quiet colour: " + start.toDisplayString (false));
+            expect (looksApricot (middle), "the arc isn't apricot past the middle: " + middle.toDisplayString (false));
+            expect (blend.getSaturation() > start.getSaturation() + 0.04f && blend.getSaturation() < middle.getSaturation() - 0.04f,
+                    "a quarter of the way round isn't a blend of the two: " + blend.toDisplayString (false));
+        }
+
+        void emberAtTheLimit()
+        {
+            beginTest ("Around 95% of the range the arc deepens to red-orange, and not before");
+
+            const auto at25 = pictureAt (25.0f);            // 94%: amber, not yet red
+            const auto at28 = pictureAt (28.0f);            // 98%
+            const auto at30 = pictureAt (30.0f);
+
+            if (at25.radius <= 0.0f || at28.radius <= 0.0f || at30.radius <= 0.0f)
+                return expect (false, "no knob");
+
+            for (float proportion = 0.0f; proportion <= 1.0f; proportion += 0.01f)
+                expect (! at25.onRing (at25.angleAt (proportion), looksEmber), "red at +25 dB, below 95%");
+
+            expect (at28.onRing (at28.angleAt (0.975f), looksEmber), "not red near the end at +28 dB");
+            expect (at30.onRing (at30.angleAt (0.98f), looksEmber), "not red at the end at +30 dB");
+            expect (! at30.onRing (at30.angleAt (0.9f), looksEmber), "red before 95% at +30 dB");
+        }
+
+        void coloursBlend()
+        {
+            beginTest ("The colours blend into each other along the arc: no sudden step anywhere");
+
+            const auto picture = pictureAt (30.0f);
+            if (picture.radius <= 0.0f)
+                return expect (false, "no knob");
+
+            // Walk the middle of the stroke in steps of 0.5% of the range (about 2 pixels at the opening size).
+            // A hard edge jumps a long way in one step: apricot to amber changes blue by 71 out of 255.
+            int biggestStep = 0;
+            float whereBiggest = 0.0f;
+            auto previous = picture.colourOnRing (picture.angleAt (0.02f));
+
+            for (float proportion = 0.025f; proportion <= 0.985f; proportion += 0.005f)
+            {
+                const auto colour = picture.colourOnRing (picture.angleAt (proportion));
+                const auto step = juce::jmax (std::abs (colour.getRed() - previous.getRed()),
+                                              std::abs (colour.getGreen() - previous.getGreen()),
+                                              std::abs (colour.getBlue() - previous.getBlue()));
+                if (step > biggestStep)
+                    biggestStep = step, whereBiggest = proportion;
+
+                previous = colour;
+            }
+
+            expectLessThan (biggestStep, 25, "a hard colour edge at " + juce::String (whereBiggest * 100.0f, 1) + "% of the way round");
+        }
+
+        void limitReadout()
+        {
+            beginTest ("Entering the red, \"Approaching the limit.\" fades in under the knob, and fades out again");
+
+            SimpleGainAudioProcessor processor;
+            setGainDb (processor, 20.0f);
+            SimpleGainAudioProcessorEditor editor (processor);
+            auto* readout = dynamic_cast<FadingLabel*> (editor.findChildWithID ("limitReadout"));
+            const auto* knob = findKnob (editor);
+            if (readout == nullptr || knob == nullptr)
+                return expect (false, "no limit readout, or no knob");
+
+            expectEquals (readout->getText(), juce::String ("Approaching the limit."));
+            expectEquals (typefaceOf (readout->getFont()), juce::String ("JetBrains Mono"));
+            expect (readout->getBounds().getY() > knob->getBounds().getCentreY(), "the readout isn't below the knob's centre");
+            expectWithinAbsoluteError (readout->getBounds().getCentreX(), editor.getWidth() / 2, 1, "the readout isn't centred");
+            expectLessThan (readout->getBottom(), juce::roundToInt (editor.getHeight() * 0.88f), "the readout runs into the lockup");
+
+            // Room to breathe under the ring: the ring's two ends are 0.81 of its radius below its centre.
+            const auto ringEnds = static_cast<float> (knob->getBounds().getCentreY()) + 0.81f * SimpleGainLookAndFeel::ringRadius (knob->getBounds().toFloat());
+            expectGreaterThan (static_cast<float> (readout->getBounds().getCentreY()) - ringEnds, editor.getHeight() * 0.07f,
+                               "the readout is cramped against the ends of the ring");
+            expect (! readout->isVisible() || readout->getAlpha() == 0.0f, "showing at +20 dB, in the amber");
+
+            // Into the red: it starts to fade in, rather than snapping on.
+            setGainDb (processor, 26.0f);
+            expectLessThan (readout->getAlpha(), 0.2f, "it snapped on");
+            readout->advance (0.1);
+            expect (readout->isVisible(), "not visible once fading in");
+            expect (readout->getAlpha() > 0.05f && readout->getAlpha() < 0.95f, "not part-way through the fade after 0.1 s");
+            readout->advance (1.0);
+            expectEquals (readout->getAlpha(), 1.0f, "not fully shown after a second");
+
+            // Amber text, readable on the background.
+            auto image = editor.createComponentSnapshot (readout->getBounds());
+            int amberPixels = 0;
+            for (int y = 0; y < image.getHeight(); ++y)
+                for (int x = 0; x < image.getWidth(); ++x)
+                    if (const auto c = image.getPixelAt (x, y); c.getHue() > 0.06f && c.getHue() < 0.12f && c.getSaturation() > 0.6f && c.getBrightness() > 0.6f)
+                        ++amberPixels;
+            expectGreaterThan (amberPixels, 30, "the readout isn't drawn in amber");
+
+            // Back out of the red: it fades away, then hides.
+            setGainDb (processor, 25.0f);
+            readout->advance (0.1);
+            expect (readout->getAlpha() > 0.05f && readout->getAlpha() < 0.95f, "not part-way through fading out after 0.1 s");
+            readout->advance (1.0);
+            expect (! readout->isVisible() && readout->getAlpha() == 0.0f, "still showing after fading out");
+
+            // Opened already in the red, it's simply there: nothing to fade from.
+            setGainDb (processor, 29.0f);
+            const SimpleGainAudioProcessorEditor reopened (processor);
+            if (auto* shown = dynamic_cast<FadingLabel*> (reopened.findChildWithID ("limitReadout")))
+                expect (shown->isVisible() && shown->getAlpha() == 1.0f, "not shown when opened at +29 dB");
         }
 
         void flatKnob()
@@ -542,20 +696,34 @@ namespace
             expectLessThan (picture.brightestIn (caption), 0.7f, "the caption isn't muted");
         }
 
+        void readableCaption()
+        {
+            beginTest ("The caption under the value is big enough to read: about 10 pixels tall at the opening size");
+
+            const auto picture = pictureAt (0.0f);
+            if (picture.radius <= 0.0f)
+                return expect (false, "no knob");
+
+            const auto caption = juce::Rectangle<float> (picture.centre.x - picture.radius * 0.4f, static_cast<float> (picture.valueBox.getBottom()),
+                                                         picture.radius * 0.8f, picture.radius * 0.35f).toNearestInt();
+            expectGreaterOrEqual (picture.drawnRowsIn (caption), 9, "the caption is too small to read easily");
+        }
+
         void nameAndFonts()
         {
-            beginTest ("SIMPLY GAIN at the top in the mono font, the value in Inter, and the lockup bottom left");
+            beginTest ("\"simply gain\" at the top in the logo's font (Sora), the value in Inter, and the lockup bottom left");
 
             SimpleGainAudioProcessor processor;
             SimpleGainAudioProcessorEditor editor (processor);
             const auto* knob = findKnob (editor);
-            auto* title = dynamic_cast<juce::Label*> (editor.getChildComponent (0));
+            auto* title = dynamic_cast<Wordmark*> (editor.findChildWithID ("title"));
             if (knob == nullptr || title == nullptr)
                 return expect (false, "no knob or no title");
 
-            expectEquals (title->getText(), juce::String ("SIMPLY GAIN"));
-            expectEquals (typefaceOf (title->getFont()), juce::String ("JetBrains Mono"));
+            expectEquals (title->getText(), juce::String ("simply gain"));
+            expectEquals (typefaceOf (title->getFont()), juce::String ("Sora"));
             expect (title->getBounds().getCentreY() < editor.getHeight() / 5, "the title isn't at the top");
+            expectWithinAbsoluteError (title->getBounds().getCentreX(), editor.getWidth() / 2, 1, "the title isn't centred");
 
             if (auto* value = findValueLabel (*knob))
                 expectEquals (typefaceOf (value->getLookAndFeel().getLabelFont (*value)), juce::String ("Inter"));
@@ -571,6 +739,73 @@ namespace
             expectGreaterThan (picture.drawnPixelsIn (left), 100, "no lockup at the bottom left");
             expectLessThan (picture.brightestIn (left), 0.7f, "the lockup isn't muted");
             expectEquals (picture.drawnPixelsIn (right), 0, "something drawn at the bottom right");
+        }
+
+        void wordmark()
+        {
+            beginTest ("The title is drawn like the logo: muted, with a growing wave under it whose last crest knocks the n upwards");
+
+            SimpleGainAudioProcessor processor;
+            SimpleGainAudioProcessorEditor editor (processor);
+            auto* title = dynamic_cast<Wordmark*> (editor.findChildWithID ("title"));
+            if (title == nullptr)
+                return expect (false, "no title");
+
+            KnobPicture picture;
+            picture.image = editor.createComponentSnapshot (title->getBounds());
+            const auto local = title->getLocalBounds();
+            expectGreaterThan (picture.drawnPixelsIn (local), 200, "the title isn't drawn");
+            expectLessThan (picture.brightestIn (local), 0.7f, "the title isn't muted");
+
+            // The letters: "simply gain" is 11 of them, and the last one sits higher than the rest.
+            const auto last = title->getText().length() - 1;
+            const auto lifted = title->letterBounds (last);
+            const auto beforeIt = title->letterBounds (last - 2);          // the a: no dot, no descender
+            const auto fontHeight = title->getFont().getHeight();
+            expect (lifted.getBottom() < beforeIt.getBottom() - 0.1f * fontHeight, "the n isn't knocked upwards");
+            expect (lifted.getBottom() > beforeIt.getBottom() - 0.5f * fontHeight, "the n is lifted so far it reads as a footnote mark");
+            expectGreaterThan (picture.drawnPixelsIn (lifted.toNearestInt()), 10, "nothing drawn where the n should be");
+
+            // The wave runs under the text, left to right, and grows: it's taller under the end than under the start.
+            const auto textBottom = juce::roundToInt (beforeIt.getBottom());
+            const auto under = local.withTop (textBottom);
+            const auto textWidth = lifted.getRight() - title->letterBounds (0).getX();
+            const auto left = under.withX (juce::roundToInt (title->letterBounds (0).getX())).withWidth (juce::roundToInt (textWidth / 3.0f));
+            const auto right = under.withX (juce::roundToInt (title->letterBounds (last - 3).getX())).withRight (juce::roundToInt (lifted.getRight()));
+            expectGreaterThan (picture.drawnPixelsIn (left), 10, "no wave under the start of the name");
+            expectGreaterThan (picture.drawnRowsIn (right), picture.drawnRowsIn (left), "the wave doesn't grow towards the end");
+        }
+
+        void ringMark()
+        {
+            beginTest ("The ring mark sits in the top-left corner: muted, with its inner circles pushed off-centre");
+
+            SimpleGainAudioProcessor processor;
+            SimpleGainAudioProcessorEditor editor (processor);
+            KnobPicture picture;
+            picture.image = editor.createComponentSnapshot (editor.getLocalBounds());
+
+            const auto corner = juce::Rectangle<int> (0, 0, editor.getWidth() / 6, editor.getHeight() / 5);
+            expectGreaterThan (picture.drawnPixelsIn (corner), 50, "nothing in the top-left corner");
+            expectLessThan (picture.brightestIn (corner), 0.7f, "the mark isn't muted");
+
+            // Find the outer ring: the box around everything drawn in the corner.
+            int left = corner.getRight(), right = 0, top = corner.getBottom(), bottom = 0;
+            for (int y = corner.getY(); y < corner.getBottom(); ++y)
+                for (int x = corner.getX(); x < corner.getRight(); ++x)
+                    if (isDrawnOn (picture.image.getPixelAt (x, y)))
+                        left = juce::jmin (left, x), right = juce::jmax (right, x), top = juce::jmin (top, y), bottom = juce::jmax (bottom, y);
+
+            const auto size = right - left;
+            expectWithinAbsoluteError (bottom - top, size, 2, "the mark isn't round");
+            expectGreaterThan (size, 16, "the mark is too small to see");
+
+            // Like a speaker cone pushed to one side: the middle is empty, the dot is to the right of it, and the left of it is empty.
+            const auto cx = (left + right) / 2, cy = (top + bottom) / 2;
+            const auto r = size / 2.0f;
+            expect (! isDrawnOn (picture.image.getPixelAt (cx, cy)), "the middle of the mark is filled: it's centred, not pushed off-centre");
+            expect (isDrawnOn (picture.image.getPixelAt (cx + juce::roundToInt (r * 0.4f), cy)), "no dot to the right of the middle");
+            expect (! isDrawnOn (picture.image.getPixelAt (cx - juce::roundToInt (r * 0.55f), cy)), "something to the left of the middle");
         }
 
         //======================================================================

@@ -19,7 +19,9 @@ namespace
         const juce::Colour text    { 0xffe8eaed };     // the value
         const juce::Colour muted   { 0xff8a9099 };     // the name, the caption and the lockup
         const juce::Colour apricot { 0xfff2a766 };     // Simply Gain's accent, used by no paid plugin
+        const juce::Colour quiet   { 0xfff8d3b0 };     // a lighter apricot for the quiet end of the arc
         const juce::Colour amber   { 0xffff8a1f };     // Volcanic Amber
+        const juce::Colour ember   { 0xffd93a1e };     // a deep red-orange for the last stretch
     }
 
     constexpr int defaultWidth  = 480;          // the family's smallest window, and 3:2 like its mock-ups
@@ -28,7 +30,10 @@ namespace
     // The knob, as fractions of the ring's radius, so it scales with the window.
     // -> documentation/editor-gui.md section 13
     constexpr float ringThickness = 0.05f;      // 2.5% of the diameter
+    constexpr float quietBlendEnd = 0.5f;       // quiet at the start, blending to apricot by halfway
     constexpr float amberKnee     = 0.85f;      // past 85% of the range the arc turns amber
+    constexpr float emberKnee     = 0.95f;      // and past 95%, ember, with the limit readout
+    constexpr float blendWidth    = 0.06f;      // each colour fades in over 6% of the range, centred on its knee
 
     const juce::String brandLine { " // maxximum displacement" };
 
@@ -36,13 +41,30 @@ namespace
     {
         return juce::Typeface::createSystemTypefaceFor (data, static_cast<size_t> (size));
     }
+
+    /** The small logo: a speaker cone seen from the front, its middle pushed to one side.
+        Sizes are fractions of the outer ring's radius, measured from the brand plan.
+        -> documentation/editor-gui.md section 14 */
+    void drawRingMark (juce::Graphics& g, const juce::Point<float> centre, const float radius)
+    {
+        const auto stroke = radius * 0.18f;
+        const auto ring = [&] (const juce::Point<float> c, const float r)
+        {
+            g.drawEllipse (juce::Rectangle<float> (r * 2.0f, r * 2.0f).withCentre (c), stroke);
+        };
+
+        ring (centre, radius);
+        ring (centre.translated (radius * 0.25f, 0.0f), radius * 0.52f);
+        g.fillEllipse (juce::Rectangle<float> (radius * 0.46f, radius * 0.46f).withCentre (centre.translated (radius * 0.44f, 0.0f)));
+    }
 }
 
 
 //==============================================================================
 SimpleGainLookAndFeel::SimpleGainLookAndFeel()
     : inter (loadFont (BinaryData::InterRegular_ttf, BinaryData::InterRegular_ttfSize)),
-      jetBrainsMono (loadFont (BinaryData::JetBrainsMonoRegular_ttf, BinaryData::JetBrainsMonoRegular_ttfSize))
+      jetBrainsMono (loadFont (BinaryData::JetBrainsMonoRegular_ttf, BinaryData::JetBrainsMonoRegular_ttfSize)),
+      sora (loadFont (BinaryData::SoraBold_ttf, BinaryData::SoraBold_ttfSize))
 {
 }
 
@@ -54,6 +76,11 @@ juce::FontOptions SimpleGainLookAndFeel::textFont (const float height) const
 juce::FontOptions SimpleGainLookAndFeel::monoFont (const float height) const
 {
     return juce::FontOptions (jetBrainsMono).withHeight (height);
+}
+
+juce::FontOptions SimpleGainLookAndFeel::logoFont (const float height) const
+{
+    return juce::FontOptions (sora).withHeight (height);
 }
 
 float SimpleGainLookAndFeel::ringRadius (const juce::Rectangle<float> knobArea)
@@ -117,32 +144,55 @@ void SimpleGainLookAndFeel::drawRotarySlider (juce::Graphics& g, const int x, co
 
     if (sliderPosProportional > 0.0f)
     {
-        // The arc as a filled outline, so it can be painted twice: apricot, then amber past the knee.
+        // The arc as a filled outline, so it can be painted more than once.
         juce::Path arc, outline;
         arc.addCentredArc (centre.x, centre.y, radius, radius, 0.0f, startAngle, valueAngle, true);
         stroke.createStrokedPath (outline, arc);
+
+        // First apricot, then a blend over the first half: quiet at the start, apricot by halfway.
+        // The blend is clipped to that half: a straight-line gradient would fade back towards
+        // quiet as the ring curves down the other side. -> documentation/editor-gui.md section 13
+        const auto onRing = [&] (const float proportion)
+        {
+            return centre.getPointOnCircumference (radius, startAngle + proportion * (endAngle - startAngle));
+        };
         g.setColour (tokens::apricot);
         g.fillPath (outline);
-
-        const auto kneeAngle = startAngle + amberKnee * (endAngle - startAngle);
-        if (valueAngle > kneeAngle)
         {
-            // A pie slice from the knee onwards (a little past the end, to cover the rounded cap).
-            juce::Path pastTheKnee;
-            pastTheKnee.addPieSegment (bounds.expanded (radius), kneeAngle, endAngle + 0.5f, 0.0f);
+            juce::Path firstHalf;
+            firstHalf.addPieSegment (bounds.expanded (radius), startAngle - 0.5f, startAngle + quietBlendEnd * (endAngle - startAngle), 0.0f);
+
+            const juce::Graphics::ScopedSaveState state (g);
+            g.reduceClipRegion (firstHalf);
+            g.setGradientFill (juce::ColourGradient (tokens::quiet, onRing (0.0f), tokens::apricot, onRing (quietBlendEnd), false));
+            g.fillPath (outline);
+        }
+
+        // Then amber around the knee, and ember around the last 5%. Each blends in from the colour
+        // before it: a gradient over a short stretch, clipped to a pie slice from where the blend
+        // starts (a little past the end, to cover the rounded cap). -> documentation/editor-gui.md section 13
+        for (const auto [knee, from, to] : { std::tuple { amberKnee, tokens::apricot, tokens::amber },
+                                             std::tuple { emberKnee, tokens::amber, tokens::ember } })
+        {
+            const auto blendStart = knee - blendWidth / 2.0f;
+            if (sliderPosProportional <= blendStart)
+                break;
+
+            juce::Path fromTheBlend;
+            fromTheBlend.addPieSegment (bounds.expanded (radius), startAngle + blendStart * (endAngle - startAngle), endAngle + 0.5f, 0.0f);
 
             const juce::Graphics::ScopedSaveState state (g);   // undoes the clip when it goes out of scope
-            g.reduceClipRegion (pastTheKnee);
-            g.setColour (tokens::amber);
+            g.reduceClipRegion (fromTheBlend);
+            g.setGradientFill (juce::ColourGradient (from, onRing (blendStart), to, onRing (knee + blendWidth / 2.0f), false));
             g.fillPath (outline);
         }
     }
 
-    // The caption, small and muted, under the value.
+    // The caption, muted, under the value: big enough to read at the smallest size.
     g.setColour (tokens::muted);
-    g.setFont (monoFont (radius * 0.1f).withKerningFactor (0.25f));
+    g.setFont (monoFont (radius * 0.14f).withKerningFactor (0.25f));
     g.drawText (slider.getTitle().toUpperCase(),
-                juce::Rectangle<float> (radius * 1.2f, radius * 0.15f).withCentre (centre.translated (0.0f, radius * 0.32f)),
+                juce::Rectangle<float> (radius * 1.2f, radius * 0.2f).withCentre (centre.translated (0.0f, radius * 0.34f)),
                 juce::Justification::centred);
 }
 
@@ -155,6 +205,156 @@ void SimpleGainLookAndFeel::drawCornerResizer (juce::Graphics& g, const int widt
 
     for (const auto i : { 0.25f, 0.5f, 0.75f })
         g.drawLine (w * i, h, w, h * i, juce::jmin (w, h) * 0.075f);
+}
+
+
+//==============================================================================
+Wordmark::Wordmark (const SimpleGainLookAndFeel& lf)
+    : lookAndFeel (lf)
+{
+    setInterceptsMouseClicks (false, false);        // just a picture: clicks go to whatever is behind
+}
+
+void Wordmark::setText (const juce::String& newText)
+{
+    text = newText;
+    repaint();
+}
+
+juce::Font Wordmark::getFont() const
+{
+    // The line of text takes 1 of 1.75 parts of the height: room above for the knocked-up
+    // letter and below for the wave. -> documentation/editor-gui.md section 14
+    return juce::Font (lookAndFeel.logoFont (static_cast<float> (getHeight()) / 1.75f));
+}
+
+juce::GlyphArrangement Wordmark::layOut() const
+{
+    const auto font = getFont();
+    juce::GlyphArrangement glyphs;
+    glyphs.addLineOfText (font, text, 0.0f, font.getHeight() * 0.2f + font.getAscent());     // y is the baseline
+
+    const auto width = glyphs.getBoundingBox (0, -1, true).getWidth();
+    glyphs.moveRangeOfGlyphs (0, -1, (static_cast<float> (getWidth()) - width) / 2.0f, 0.0f);   // centred across
+    return glyphs;
+}
+
+juce::AffineTransform Wordmark::knockUp (const juce::PositionedGlyph& glyph) const
+{
+    // Lifted about a seventh of the line and tipped back a little: knocked, not a footnote mark.
+    const auto height = getFont().getHeight();
+    return juce::AffineTransform::rotation (-0.1f, glyph.getLeft(), glyph.getBaselineY())
+                                 .translated (0.0f, -0.15f * height);
+}
+
+juce::Rectangle<float> Wordmark::letterBounds (const int index) const
+{
+    auto glyphs = layOut();             // not const: JUCE's getGlyph() isn't marked const
+    if (! juce::isPositiveAndBelow (index, glyphs.getNumGlyphs()))
+        return {};
+
+    const auto& glyph = glyphs.getGlyph (index);
+    const auto isLast = index == glyphs.getNumGlyphs() - 1;
+    return isLast ? glyph.getBounds().transformedBy (knockUp (glyph)) : glyph.getBounds();
+}
+
+juce::Path Wordmark::wave (const juce::GlyphArrangement& glyphs) const
+{
+    // A sine wave under the name, growing from a ripple to a crest under the last letter.
+    const auto height = getFont().getHeight();
+    const auto box = glyphs.getBoundingBox (0, -1, true);
+    const auto middle = box.getBottom() + 0.26f * height;              // the line it ripples about
+    const auto cycles = juce::jmax (2.0f, std::round (box.getWidth() / (0.42f * height)));
+
+    juce::Path path;
+    const auto steps = juce::roundToInt (box.getWidth());                // a point every pixel or so
+
+    for (int i = 0; i <= steps; ++i)
+    {
+        const auto along = static_cast<float> (i) / static_cast<float> (steps);   // 0 at the start, 1 at the end
+        const auto x = box.getX() + along * box.getWidth();
+        const auto size = height * (0.04f + 0.22f * along * along);
+        // The phase ends a quarter-turn past whole cycles, so the wave finishes on a crest.
+        const auto phase = along * (cycles + 0.25f) * juce::MathConstants<float>::twoPi;
+        const auto y = middle - size * std::sin (phase);
+
+        if (i == 0)                         // not path.isEmpty(): that stays true until a line is added
+            path.startNewSubPath (x, y);
+        else
+            path.lineTo (x, y);
+    }
+
+    return path;
+}
+
+void Wordmark::paint (juce::Graphics& g)
+{
+    // One colour, muted, like the one-colour logo. -> documentation/editor-gui.md section 14
+    auto glyphs = layOut();
+    const auto height = getFont().getHeight();
+    g.setColour (tokens::muted);
+    g.strokePath (wave (glyphs), juce::PathStrokeType (0.06f * height, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+    for (int i = 0; i < glyphs.getNumGlyphs(); ++i)
+    {
+        const auto& glyph = glyphs.getGlyph (i);
+        if (i == glyphs.getNumGlyphs() - 1)
+            glyph.draw (g, knockUp (glyph));
+        else
+            glyph.draw (g);
+    }
+}
+
+
+//==============================================================================
+FadingLabel::FadingLabel()
+{
+    setInterceptsMouseClicks (false, false);
+    applyProgress();
+}
+
+void FadingLabel::fadeTo (const bool shouldShow)
+{
+    target = shouldShow ? 1.0 : 0.0;
+
+    if (! juce::approximatelyEqual (progress, target) && ! isTimerRunning())
+    {
+        lastTickMs = juce::Time::getMillisecondCounterHiRes();
+        startTimerHz (60);              // the message thread calls timerCallback about 60 times a second
+    }
+}
+
+void FadingLabel::showNow (const bool shouldShow)
+{
+    stopTimer();
+    progress = target = shouldShow ? 1.0 : 0.0;
+    applyProgress();
+}
+
+void FadingLabel::advance (const double seconds)
+{
+    const auto step = seconds / fadeSeconds;
+    progress = target > progress ? juce::jmin (target, progress + step) : juce::jmax (target, progress - step);
+    applyProgress();
+
+    if (juce::approximatelyEqual (progress, target))
+        stopTimer();
+}
+
+void FadingLabel::timerCallback()
+{
+    // Timers can arrive late, so step by the real time since the last tick (at most 0.1 s).
+    const auto now = juce::Time::getMillisecondCounterHiRes();
+    advance (juce::jmin (0.1, (now - lastTickMs) / 1000.0));
+    lastTickMs = now;
+}
+
+void FadingLabel::applyProgress()
+{
+    // Eased (smoothstep), so it starts and settles gently instead of moving at one speed.
+    const auto eased = progress * progress * (3.0 - 2.0 * progress);
+    setAlpha (static_cast<float> (eased));
+    setVisible (progress > 0.0);
 }
 
 
@@ -253,11 +453,11 @@ SimpleGainAudioProcessorEditor::SimpleGainAudioProcessorEditor (SimpleGainAudioP
       // -> documentation/editor-gui.md section 4
       gainAttachment (p.apvts, "gain", gainSlider)
 {
-    // The product name in capitals, from PRODUCT_NAME in CMakeLists.txt. -> documentation/editor-gui.md section 3
-    titleLabel.setText (p.getName().toUpperCase(), juce::dontSendNotification);
-    titleLabel.setJustificationType (juce::Justification::centred);
-    titleLabel.setColour (juce::Label::textColourId, tokens::muted);
-    addAndMakeVisible (titleLabel);
+    // The product name in lower case, like the logo, from PRODUCT_NAME in CMakeLists.txt.
+    // -> documentation/editor-gui.md section 3
+    title.setComponentID ("title");
+    title.setText (p.getName().toLowerCase());
+    addAndMakeVisible (title);
 
     // A rotary knob with an editable value in the middle. The ID lets the tests find it.
     // -> documentation/editor-gui.md section 3
@@ -269,6 +469,16 @@ SimpleGainAudioProcessorEditor::SimpleGainAudioProcessorEditor (SimpleGainAudioP
     gainSlider.setColour (juce::Slider::textBoxBackgroundColourId,   juce::Colours::transparentBlack);
     gainSlider.setColour (juce::Slider::textBoxHighlightColourId,    tokens::apricot.withAlpha (0.35f));
     addAndMakeVisible (gainSlider);
+
+    // A quiet readout under the knob, faded in as the arc turns ember. -> documentation/editor-gui.md section 14
+    limitReadout.setComponentID ("limitReadout");
+    limitReadout.setText ("Approaching the limit.", juce::dontSendNotification);
+    limitReadout.setJustificationType (juce::Justification::centred);
+    limitReadout.setColour (juce::Label::textColourId, tokens::amber);
+    addChildComponent (limitReadout);                   // added hidden: the fade shows it
+
+    gainSlider.onValueChange = [this] { limitReadout.fadeTo (isInTheRed()); };
+    limitReadout.showNow (isInTheRed());                // opened in the red: just there, no fade
 
     // AFTER adding the children: they rebuild their parts with it, like the knob's value box.
     // Must be undone in the destructor. -> documentation/editor-gui.md section 9
@@ -289,17 +499,27 @@ SimpleGainAudioProcessorEditor::~SimpleGainAudioProcessorEditor()
 
 
 //==============================================================================
+bool SimpleGainAudioProcessorEditor::isInTheRed()
+{
+    return gainSlider.valueToProportionOfLength (gainSlider.getValue()) > emberKnee;
+}
+
 void SimpleGainAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // A flat background, and the lockup along the bottom left. -> documentation/editor-gui.md section 6
+    // A flat background, the ring mark top left, and the lockup along the bottom left.
+    // -> documentation/editor-gui.md section 6
     g.fillAll (tokens::base);
 
     const auto height = static_cast<float> (getHeight());
     const auto margin = height * 0.06f;
     g.setColour (tokens::muted);
+
+    const auto markRadius = height * 0.039f;
+    drawRingMark (g, { margin + markRadius * 1.09f, height * 0.1f }, markRadius);      // level with the title's letters
+
     g.setFont (lookAndFeel.monoFont (height * 0.035f));
-    g.drawText (titleLabel.getText() + brandLine,
-                juce::Rectangle<float> (margin, height * 0.86f, static_cast<float> (getWidth()) - margin * 2.0f, height * 0.1f),
+    g.drawText (title.getText().toUpperCase() + brandLine,
+                juce::Rectangle<float> (margin, height * 0.885f, static_cast<float> (getWidth()) - margin * 2.0f, height * 0.07f),
                 juce::Justification::centredLeft);
 }
 
@@ -309,9 +529,15 @@ void SimpleGainAudioProcessorEditor::resized()
     // -> documentation/editor-gui.md section 7
     const auto height = static_cast<float> (getHeight());
 
-    titleLabel.setFont (lookAndFeel.monoFont (height * 0.045f).withKerningFactor (0.2f));
-    titleLabel.setBounds (juce::Rectangle<float> (0.0f, height * 0.05f, static_cast<float> (getWidth()), height * 0.1f).toNearestInt());
+    const auto width = static_cast<float> (getWidth());
 
+    title.setBounds (juce::Rectangle<float> (0.0f, height * 0.045f, width, height * 0.125f).toNearestInt());
+
+    // A little below the middle, so the title's wave has room above the ring.
     const auto knobSize = height * 0.64f;
-    gainSlider.setBounds (juce::Rectangle<float> (knobSize, knobSize).withCentre (getLocalBounds().getCentre().toFloat()).toNearestInt());
+    gainSlider.setBounds (juce::Rectangle<float> (knobSize, knobSize).withCentre ({ width / 2.0f, height * 0.52f }).toNearestInt());
+
+    // Under the gap at the bottom of the ring, with room on both sides: the ring above, the lockup below.
+    limitReadout.setFont (lookAndFeel.monoFont (height * 0.04f));
+    limitReadout.setBounds (juce::Rectangle<float> (0.0f, height * 0.815f, width, height * 0.05f).toNearestInt());
 }
