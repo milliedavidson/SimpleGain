@@ -15,7 +15,11 @@ version=$(sed -n 's/^project(SimpleGain VERSION \([0-9.]*\).*/\1/p' CMakeLists.t
 name="simply gain"
 build="build-release"                   # its own folder: the everyday Debug build is untouched
 artefacts="$build/SimpleGain_artefacts/Release"
-stage="$build/package/$name $version"
+# Gathered and signed outside this folder: Documents syncs with iCloud Drive here, and iCloud adds
+# its own file attributes, which codesign refuses. Deleted again when the script ends.
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+stage="$work/$name $version"
 zip="dist/simply-gain-$version-mac.zip"
 
 # 1. Build: Release, for both kinds of Mac, and don't install over this Mac's own plugins.
@@ -24,7 +28,6 @@ cmake -B "$build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x8
 cmake --build "$build" --target SimpleGain_AU SimpleGain_VST3 -j 8
 
 # 2. Gather the plugins, the install note and the licences.
-rm -rf "$build/package"
 mkdir -p "$stage/Licences"
 cp -R "$artefacts/AU/$name.component" "$artefacts/VST3/$name.vst3" "$stage/"
 cp "packaging/How to install.txt" "$stage/"
@@ -38,7 +41,9 @@ cp libs/JUCE/modules/juce_audio_plugin_client/AU/AudioUnitSDK/LICENSE.txt       
 
 # 3. Sign ad hoc: Apple Silicon Macs refuse to run code with no signature at all.
 #    "-" means no identity, so macOS still treats it as unchecked when it's downloaded.
+#    codesign refuses extended attributes (Finder information and the like), so clear any copied ones.
 for bundle in "$stage/$name.component" "$stage/$name.vst3"; do
+    xattr -cr "$bundle"
     codesign --force --sign - "$bundle"
     codesign --verify --strict "$bundle"
 done

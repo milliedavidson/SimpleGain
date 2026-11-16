@@ -70,16 +70,20 @@ juce_add_plugin(SimpleGain
 target_sources(SimpleGain
     PRIVATE
         Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp)
+        Source/PluginEditor.cpp
+        Source/Guide.cpp
+        Source/CornerButtons.cpp
+        Source/WebsitePanel.cpp)
 
-# The brand fonts, compiled into the plugin as byte arrays (BinaryData::...), so
-# it never depends on what's installed. All three are under the SIL Open Font License.
-# -> documentation/editor-gui.md section 9
-juce_add_binary_data(SimpleGain_Fonts
+# Files compiled into the plugin as byte arrays (BinaryData::...), so it never
+# depends on what's installed: the brand fonts (all under the SIL Open Font
+# License) and the guide's text. -> documentation/editor-gui.md sections 9 and 15
+juce_add_binary_data(SimpleGain_Assets
     SOURCES
         assets/fonts/Inter-Regular.ttf
         assets/fonts/JetBrainsMono-Regular.ttf
-        assets/fonts/Sora-Bold.ttf)
+        assets/fonts/Sora-Bold.ttf
+        guide/quick-start.md)
 
 # Build-time switches that remove JUCE features from the binary entirely.
 # JUCE_USE_CURL is Linux-only (a no-op on macOS); JUCE_VST3_CAN_REPLACE_VST2
@@ -96,7 +100,7 @@ target_compile_definitions(SimpleGain
 # -> documentation/cmake-walkthrough.md sections 7 and 8
 target_link_libraries(SimpleGain
     PRIVATE
-        SimpleGain_Fonts
+        SimpleGain_Assets
         juce::juce_audio_utils
     PUBLIC
         juce::juce_recommended_config_flags
@@ -121,9 +125,14 @@ target_sources(SimpleGain_Tests
         tests/CorruptStateTests.cpp
         tests/EditorTests.cpp
         tests/KnobDragTests.cpp
+        tests/GuideTests.cpp
+        tests/WebsitePanelTests.cpp
         tests/EditorSnapshots.cpp
         Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp)
+        Source/PluginEditor.cpp
+        Source/Guide.cpp
+        Source/CornerButtons.cpp
+        Source/WebsitePanel.cpp)
 
 target_include_directories(SimpleGain_Tests PRIVATE Source tests)
 
@@ -136,7 +145,7 @@ target_compile_definitions(SimpleGain_Tests
 
 target_link_libraries(SimpleGain_Tests
     PRIVATE
-        SimpleGain_Fonts
+        SimpleGain_Assets
         juce::juce_audio_utils
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)

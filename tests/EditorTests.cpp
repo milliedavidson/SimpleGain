@@ -208,7 +208,8 @@ namespace
             valueInTheMiddle();
             readableCaption();
             nameAndFonts();
-            wordmark();
+            plainTitle();
+            brandLogo();
             ringMark();
             openingAndClosing();
         }
@@ -601,7 +602,7 @@ namespace
 
         void limitReadout()
         {
-            beginTest ("Entering the red, \"Approaching the limit.\" fades in under the knob, and fades out again");
+            beginTest ("Entering the red, \"Approaching the limit.\" fades in by the end of the arc, and fades out again");
 
             SimpleGainAudioProcessor processor;
             setGainDb (processor, 20.0f);
@@ -613,14 +614,34 @@ namespace
 
             expectEquals (readout->getText(), juce::String ("Approaching the limit."));
             expectEquals (typefaceOf (readout->getFont()), juce::String ("JetBrains Mono"));
-            expect (readout->getBounds().getY() > knob->getBounds().getCentreY(), "the readout isn't below the knob's centre");
-            expectWithinAbsoluteError (readout->getBounds().getCentreX(), editor.getWidth() / 2, 1, "the readout isn't centred");
-            expectLessThan (readout->getBottom(), juce::roundToInt (editor.getHeight() * 0.88f), "the readout runs into the lockup");
+            if (const auto* logo = editor.findChildWithID ("logo"))
+                expectLessOrEqual (readout->getBottom(), logo->getY(), "the readout runs into the logo");
+            else
+                expect (false, "no logo");
 
-            // Room to breathe under the ring: the ring's two ends are 0.81 of its radius below its centre.
-            const auto ringEnds = static_cast<float> (knob->getBounds().getCentreY()) + 0.81f * SimpleGainLookAndFeel::ringRadius (knob->getBounds().toFloat());
-            expectGreaterThan (static_cast<float> (readout->getBounds().getCentreY()) - ringEnds, editor.getHeight() * 0.07f,
-                               "the readout is cramped against the ends of the ring");
+            // Where the cursor is when turning up to the limit: starting just under the arc's end, at the
+            // bottom right (0.59 of the ring's radius right of its centre, 0.81 below), and running right.
+            // Checked at every size: the text must always fit, inside the margin, without being cut short.
+            const auto* limits = editor.getConstrainer();
+            for (const auto height : { limits->getMinimumHeight(), editor.getHeight(), limits->getMaximumHeight() })
+            {
+                editor.setSize (height * 3 / 2, height);
+                const auto size = juce::String (editor.getWidth()) + " x " + juce::String (height);
+                const auto bounds = readout->getBounds().toFloat();
+                const auto radius = SimpleGainLookAndFeel::ringRadius (knob->getBounds().toFloat());
+                const auto arcEnd = knob->getBounds().toFloat().getCentre().translated (0.59f * radius, 0.81f * radius);
+                const auto textWidth = juce::GlyphArrangement::getStringWidth (readout->getFont(), readout->getText());
+                const auto margin = static_cast<float> (height) * 0.06f;
+
+                expect (readout->getJustificationType().testFlags (juce::Justification::left), "the readout isn't left-aligned");
+                expectWithinAbsoluteError (bounds.getX(), arcEnd.x, 1.5f, "the text doesn't start under the arc's end at " + size);
+                expectLessOrEqual (textWidth, bounds.getWidth(), "the readout's text is cut short at " + size);
+                expectLessOrEqual (bounds.getX() + textWidth, static_cast<float> (editor.getWidth()) - margin, "the text runs past the margin at " + size);
+                expect (bounds.getCentreY() > arcEnd.y + static_cast<float> (height) * 0.03f, "the readout is cramped against the arc's end at " + size);
+                expect (bounds.getCentreY() < arcEnd.y + static_cast<float> (height) * 0.12f, "the readout is too far below the arc's end at " + size);
+            }
+
+            editor.setSize (limits->getMinimumWidth(), limits->getMinimumHeight());
             expect (! readout->isVisible() || readout->getAlpha() == 0.0f, "showing at +20 dB, in the amber");
 
             // Into the red: it starts to fade in, rather than snapping on.
@@ -711,12 +732,12 @@ namespace
 
         void nameAndFonts()
         {
-            beginTest ("\"simply gain\" at the top in the logo's font (Sora), the value in Inter, and the lockup bottom left");
+            beginTest ("\"simply gain\" at the top in the logo's font (Sora), the value in Inter, and the brand logo bottom left");
 
             SimpleGainAudioProcessor processor;
             SimpleGainAudioProcessorEditor editor (processor);
             const auto* knob = findKnob (editor);
-            auto* title = dynamic_cast<Wordmark*> (editor.findChildWithID ("title"));
+            auto* title = dynamic_cast<juce::Label*> (editor.findChildWithID ("title"));
             if (knob == nullptr || title == nullptr)
                 return expect (false, "no knob or no title");
 
@@ -730,24 +751,24 @@ namespace
             else
                 expect (false, "no value label");
 
-            // The lockup is painted along the bottom left, and the bottom right stays empty (apart from the resize grip).
+            // The logo is along the bottom left, and the bottom right stays empty (apart from the resize grip).
             KnobPicture picture;
             picture.image = editor.createComponentSnapshot (editor.getLocalBounds());
             const auto bottomStrip = editor.getLocalBounds().removeFromBottom (editor.getHeight() / 8);
             const auto [left, right] = std::pair { bottomStrip.withWidth (editor.getWidth() / 2),
                                                    bottomStrip.withLeft (editor.getWidth() * 3 / 4).withRight (resizeGrip (editor).getX()) };
-            expectGreaterThan (picture.drawnPixelsIn (left), 100, "no lockup at the bottom left");
-            expectLessThan (picture.brightestIn (left), 0.7f, "the lockup isn't muted");
+            expectGreaterThan (picture.drawnPixelsIn (left), 100, "no logo at the bottom left");
+            expectLessThan (picture.brightestIn (left), 0.7f, "the logo isn't muted");
             expectEquals (picture.drawnPixelsIn (right), 0, "something drawn at the bottom right");
         }
 
-        void wordmark()
+        void plainTitle()
         {
-            beginTest ("The title is drawn like the logo: muted, with a growing wave under it whose last crest knocks the n upwards");
+            beginTest ("The title is plain: muted, no wave under it, and its last letter level with its first");
 
             SimpleGainAudioProcessor processor;
             SimpleGainAudioProcessorEditor editor (processor);
-            auto* title = dynamic_cast<Wordmark*> (editor.findChildWithID ("title"));
+            auto* title = editor.findChildWithID ("title");
             if (title == nullptr)
                 return expect (false, "no title");
 
@@ -757,21 +778,66 @@ namespace
             expectGreaterThan (picture.drawnPixelsIn (local), 200, "the title isn't drawn");
             expectLessThan (picture.brightestIn (local), 0.7f, "the title isn't muted");
 
-            // The letters: "simply gain" is 11 of them, and the last one sits higher than the rest.
-            const auto last = title->getText().length() - 1;
-            const auto lifted = title->letterBounds (last);
-            const auto beforeIt = title->letterBounds (last - 2);          // the a: no dot, no descender
-            const auto fontHeight = title->getFont().getHeight();
-            expect (lifted.getBottom() < beforeIt.getBottom() - 0.1f * fontHeight, "the n isn't knocked upwards");
-            expect (lifted.getBottom() > beforeIt.getBottom() - 0.5f * fontHeight, "the n is lifted so far it reads as a footnote mark");
-            expectGreaterThan (picture.drawnPixelsIn (lifted.toNearestInt()), 10, "nothing drawn where the n should be");
+            // The ink's left and right edges, then the top and bottom rows drawn in a narrow slice at each end.
+            // "s" and "n" are both plain lower-case letters: no ascender, no descender, so they line up.
+            // Only the middle half: the strip runs the full width, and the ring mark is painted at its left.
+            int inkLeft = local.getRight(), inkRight = 0;
+            for (int x = local.getWidth() / 4; x < local.getWidth() * 3 / 4; ++x)
+                if (picture.drawnPixelsIn ({ x, 0, 1, local.getHeight() }) > 0)
+                    inkLeft = juce::jmin (inkLeft, x), inkRight = juce::jmax (inkRight, x);
+
+            const auto slice = juce::jmax (2, (inkRight - inkLeft) / 20);
+            const auto rowsDrawn = [&] (const int fromX)
+            {
+                int top = local.getBottom(), bottom = 0;
+                for (int y = 0; y < local.getHeight(); ++y)
+                    if (picture.drawnPixelsIn ({ fromX, y, slice, 1 }) > 0)
+                        top = juce::jmin (top, y), bottom = juce::jmax (bottom, y);
+                return std::pair { top, bottom };
+            };
+
+            const auto [sTop, sBottom] = rowsDrawn (inkLeft);
+            const auto [nTop, nBottom] = rowsDrawn (inkRight - slice + 1);
+            expectWithinAbsoluteError (nTop, sTop, 1, "the last letter isn't level with the first: knocked up?");
+            expectWithinAbsoluteError (nBottom, sBottom, 1, "something is drawn under the ends of the name: a wave?");
+        }
+
+        void brandLogo()
+        {
+            beginTest ("The brand logo sits bottom left: muted, with a growing wave under it whose last crest knocks the t upwards");
+
+            SimpleGainAudioProcessor processor;
+            SimpleGainAudioProcessorEditor editor (processor);
+            auto* logo = dynamic_cast<Wordmark*> (editor.findChildWithID ("logo"));
+            if (logo == nullptr)
+                return expect (false, "no logo");
+
+            expectEquals (logo->getText(), juce::String ("maxximum displacement"));
+            expectEquals (typefaceOf (logo->getFont()), juce::String ("Sora"));
+            expect (logo->getY() > editor.getHeight() * 3 / 4, "the logo isn't at the bottom");
+            expectLessThan (static_cast<float> (logo->getX()) + logo->letterBounds (0).getX(), editor.getWidth() * 0.1f, "the logo doesn't start at the left");
+
+            KnobPicture picture;
+            picture.image = editor.createComponentSnapshot (logo->getBounds());
+            const auto local = logo->getLocalBounds();
+            expectGreaterThan (picture.drawnPixelsIn (local), 200, "the logo isn't drawn");
+            expectLessThan (picture.brightestIn (local), 0.7f, "the logo isn't muted");
+
+            // The last letter sits higher than the rest, but not so far it reads as a footnote mark.
+            const auto last = logo->getText().length() - 1;
+            const auto lifted = logo->letterBounds (last);
+            const auto beforeIt = logo->letterBounds (last - 2);           // the e: no ascender, no descender
+            const auto fontHeight = logo->getFont().getHeight();
+            expect (lifted.getBottom() < beforeIt.getBottom() - 0.1f * fontHeight, "the t isn't knocked upwards");
+            expect (lifted.getBottom() > beforeIt.getBottom() - 0.5f * fontHeight, "the t is lifted so far it reads as a footnote mark");
+            expectGreaterThan (picture.drawnPixelsIn (lifted.toNearestInt()), 10, "nothing drawn where the t should be");
 
             // The wave runs under the text, left to right, and grows: it's taller under the end than under the start.
             const auto textBottom = juce::roundToInt (beforeIt.getBottom());
             const auto under = local.withTop (textBottom);
-            const auto textWidth = lifted.getRight() - title->letterBounds (0).getX();
-            const auto left = under.withX (juce::roundToInt (title->letterBounds (0).getX())).withWidth (juce::roundToInt (textWidth / 3.0f));
-            const auto right = under.withX (juce::roundToInt (title->letterBounds (last - 3).getX())).withRight (juce::roundToInt (lifted.getRight()));
+            const auto textWidth = lifted.getRight() - logo->letterBounds (0).getX();
+            const auto left = under.withX (juce::roundToInt (logo->letterBounds (0).getX())).withWidth (juce::roundToInt (textWidth / 3.0f));
+            const auto right = under.withX (juce::roundToInt (logo->letterBounds (last - 3).getX())).withRight (juce::roundToInt (lifted.getRight()));
             expectGreaterThan (picture.drawnPixelsIn (left), 10, "no wave under the start of the name");
             expectGreaterThan (picture.drawnRowsIn (right), picture.drawnRowsIn (left), "the wave doesn't grow towards the end");
         }

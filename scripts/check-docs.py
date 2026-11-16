@@ -28,7 +28,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DOC_DIR = ROOT / "documentation"
 
-md_files = [ROOT / "README.md", ROOT / "CLAUDE.md"] + sorted(DOC_DIR.glob("*.md"))
+md_files = [ROOT / "README.md", ROOT / "CLAUDE.md", ROOT / "guide" / "quick-start.md"] + sorted(DOC_DIR.glob("*.md"))
 docs = sorted(p for p in DOC_DIR.glob("*.md") if p.name != "README.md")
 problems = []
 

@@ -191,7 +191,8 @@ compiler to compile it, and for us that's this line in `CMakeLists.txt`:
 ```cmake
 target_sources(SimpleGain PRIVATE
     Source/PluginProcessor.cpp
-    Source/PluginEditor.cpp)
+    Source/PluginEditor.cpp
+    Source/Guide.cpp)
 ```
 
 Two files are listed, so two files get compiled. Add a `.cpp` to the folder and *don't* list it

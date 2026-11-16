@@ -30,6 +30,8 @@ way to do it, I'd love to hear it: see [Contributing](#contributing).
 
 🎚️ Builds as **Standalone**, **Audio Unit (AU)**, and **VST3** from one CMake project
 
+🎚️ A [quick-start guide](guide/quick-start.md) built into the plugin, behind the ? button
+
 🎚️ AU validated end-to-end with Apple's own `auval` — Logic and GarageBand will load it
 
 🎚️ Commented for people learning C++ — short notes in the code, with the full reasoning in
@@ -69,7 +71,7 @@ is essential — skip it and `libs/JUCE` will be empty, which produces a confusi
 rather than an obvious one.
 
 ```bash
-git clone --recurse-submodules https://github.com/milliedavidson/SimpleGain.git
+git clone --recurse-submodules https://github.com/milliedavidson/simply-gain.git
 ```
 
 ---

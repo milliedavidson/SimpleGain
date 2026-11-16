@@ -229,7 +229,8 @@ space needs quotes in a shell command.
 target_sources(SimpleGain
     PRIVATE
         Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp)
+        Source/PluginEditor.cpp
+        Source/Guide.cpp)
 ```
 
 Only the `.cpp` files are listed. Headers don't need to be: a `.cpp` `#include`s them, so the
@@ -413,7 +414,8 @@ target_sources(SimpleGain_Tests
         tests/GainSmoothingTests.cpp
         ...
         Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp)
+        Source/PluginEditor.cpp
+        Source/Guide.cpp)
 ```
 
 The tests compile the plugin's **own two source files again**, straight into the test app, rather

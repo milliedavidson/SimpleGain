@@ -12,6 +12,10 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
+#include "Fading.h"
+#include "Guide.h"
+#include "WebsitePanel.h"
+#include "CornerButtons.h"
 
 #include <optional>
 
@@ -61,9 +65,9 @@ private:
 
 //==============================================================================
 /**
-    The plugin's name drawn like the brand logo: lower case in Sora Bold, with a
-    sound wave under it that grows until its last crest knocks the final letter up.
-    -> documentation/editor-gui.md section 14
+    The brand logo: the name in lower case in Sora Bold, drawn from the left edge,
+    with a sound wave under it that grows until its last crest knocks the final
+    letter up. -> documentation/editor-gui.md section 14
 */
 class Wordmark final : public juce::Component
 {
@@ -86,37 +90,6 @@ private:
 
     const SimpleGainLookAndFeel& lookAndFeel;     // a reference: the editor owns it, and outlives this
     juce::String text;
-};
-
-
-//==============================================================================
-/**
-    A label that fades in and out instead of snapping on and off. A timer moves
-    the fade along; a test can call advance() itself.
-    -> documentation/editor-gui.md section 14
-*/
-class FadingLabel final : public juce::Label, private juce::Timer
-{
-public:
-    FadingLabel();
-
-    /** Starts fading in or out from wherever it is now. */
-    void fadeTo (bool shouldShow);
-
-    /** Shows or hides it at once: for when the window opens. */
-    void showNow (bool shouldShow);
-
-    /** Moves the fade on by `seconds`. */
-    void advance (double seconds);
-
-    static constexpr double fadeSeconds = 0.35;
-
-private:
-    void timerCallback() override;
-    void applyProgress();
-
-    double progress = 0.0, target = 0.0;    // 0 hidden, 1 shown; the alpha eases between them
-    double lastTickMs = 0.0;
 };
 
 
@@ -162,7 +135,7 @@ private:
 //==============================================================================
 /**
     The window: the ring mark and the name at the top, a gain knob, the limit
-    readout under it, and the brand lockup.
+    readout under it, the brand logo, and the ? button that opens the guide.
 
     juce::AudioProcessorEditor is a juce::Component, JUCE's base class for
     anything drawable — roughly WPF's UIElement or WinForms' Control.
@@ -191,10 +164,19 @@ private:
     // first), and the attachment's destructor touches the slider (so it is last).
     // -> documentation/editor-gui.md section 5
     SimpleGainLookAndFeel lookAndFeel;
-    Wordmark title { lookAndFeel };
+    juce::Label title;
     RelativeRotarySlider gainSlider;
     FadingLabel limitReadout;
+    Wordmark logo { lookAndFeel };
+    GuideView guide { lookAndFeel };
+    WebsitePanel websitePanel { lookAndFeel };
+    GuideButton guideButton { lookAndFeel };
+    MarkButton markButton { lookAndFeel };
     juce::AudioProcessorValueTreeState::SliderAttachment gainAttachment;
+
+    /** Which panel is over the controls. Only one is ever open. */
+    enum class Panel { none, guide, website };
+    void showPanel (Panel);
 
     /** Is the knob past the start of the ember, the last stretch before the limit? */
     [[nodiscard]] bool isInTheRed();      // not const: JUCE's valueToProportionOfLength() isn't

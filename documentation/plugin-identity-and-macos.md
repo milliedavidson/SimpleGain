@@ -61,9 +61,9 @@ crash that killed the standalone app on first launch; and packaging it to send t
 > is requested again on first launch. That's expected, not a regression.
 
 > ✅ **Renamed 2026-11-16.** `PRODUCT_NAME` is now **simply gain**: the name in the brand plan,
-> in lower case to match the logo-style title in the window. It's the name hosts list, and the
+> in lower case to match the title in the window, which is set in the logo's font. It's the name hosts list, and the
 > bundles are called `simply gain.component`, `simply gain.vst3` and `simply gain.app`. The
-> lockup at the bottom of the window still shows it in capitals.
+> lockup in the brand plan still writes it in capitals.
 >
 > The CMake target, the class names and the bundle ID keep `SimpleGain`. Nobody sees them, and
 > the bundle ID is one of the permanent things. Hosts recognise the plugin by its codes (`Sgai`,
@@ -275,6 +275,9 @@ It writes `dist/simply-gain-0.1.0-mac.zip` (the version comes from `project()`).
 - **It builds in `build-release/`**, so the everyday Debug build is left alone.
 - **It doesn't install anything.** `-DSIMPLEGAIN_INSTALL_AFTER_BUILD=OFF` turns off
   `COPY_PLUGIN_AFTER_BUILD`, so the Release build doesn't overwrite the plugins on this Mac.
+- **It signs in a temporary folder.** This repository sits in Documents, which syncs with iCloud
+  Drive here. iCloud adds its own attributes to every file. `codesign` refuses a bundle that has
+  them, with the error *resource fork, Finder information, or similar detritus not allowed*.
 - **It checks itself**: it stops if the result isn't universal, and prints the minimum macOS.
 - **`ditto`, not `zip`.** `ditto` is the zip tool the Finder uses. It keeps a bundle's symbolic
   links and permissions, which a plain `zip` can break.

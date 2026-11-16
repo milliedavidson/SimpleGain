@@ -55,4 +55,4 @@ Plug-in Manager, find "simply gain", select it, and click
 
 Source code
 -----------
-simply gain is open source: https://github.com/milliedavidson/SimpleGain
+simply gain is open source: https://github.com/milliedavidson/simply-gain

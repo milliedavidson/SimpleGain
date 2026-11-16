@@ -425,14 +425,18 @@ editor holds a reference to the processor rather than owning it, and the message
 
 - **Written test-first**, with 16 tests that need no screen (8 passed and 10 failed against the old
   generic editor, then all green). More tests came with the brand look, the fine number drag and the
-  logo below, so there are now 34.
+  logo below, six for the guide and four for the website panel, so there are now 45.
 - **The window follows the Maxximum Displacement brand plan.** It has a flat near-black panel, a
   slim apricot ring with the value in the middle, and an amber warm-up past 85% of the range. It
-  uses the brand fonts and the lockup `SIMPLY GAIN // maxximum displacement`. It opens at 480×320, the family's
+  uses the brand fonts, with the brand logo along the bottom left. It opens at 480×320, the family's
   smallest size (see [The editor §13](editor-gui.md#13-drawing-the-knob-the-brand-look)). An
   earlier purple restyle was replaced by it, and the README banner now matches.
-- **Logo, colours and the limit readout.** The title is drawn like the brand logo, in Sora Bold
-  with a growing wave, and the ring mark sits top left. The arc is lighter at the quiet end and a
+- **The ring mark is a button.** It opens an "Under construction" panel, where the website will be
+  linked (see [The editor §16](editor-gui.md#16-the-ring-marks-panel-and-the-corner-buttons)).
+- **A quick-start guide** behind a ? button, top right: a simple explanation first, then one for
+  the nerds (see [The editor §15](editor-gui.md#15-the-quick-start-guide)).
+- **Logo, colours and the limit readout.** The title is in the logo's font, Sora Bold. The brand
+  logo, with its growing wave, sits bottom left, and the ring mark top left. The arc is lighter at the quiet end and a
   deep red-orange in its last 5%, where *Approaching the limit.* fades in (see
   [The editor §14](editor-gui.md#14-the-logo-the-ring-mark-and-the-limit-readout)).
 - **Renamed to simply gain** (`PRODUCT_NAME`), the name in the brand plan, in lower case like the logo. The codes, the bundle

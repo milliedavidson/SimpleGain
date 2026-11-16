@@ -13,8 +13,8 @@ parameter in both directions, why member order matters, and how a GUI gets teste
 ## In short
 
 - **The editor is a `juce::Component`** — JUCE's base class for anything drawable, roughly WPF's
-  `UIElement` or WinForms' `Control`. Components form a tree: the editor owns a title, a knob and
-  a limit readout.
+  `UIElement` or WinForms' `Control`. Components form a tree: the editor owns a title, a knob, a
+  limit readout and the brand logo.
 - **It's separate from the processor and optional.** A host can run the plugin with no window,
   and opens and closes the window many times. The editor lives on the **message thread**;
   `processBlock` stays on the audio thread and never learns the editor exists.
@@ -37,12 +37,15 @@ parameter in both directions, why member order matters, and how a GUI gets teste
 - **The look comes from the Maxximum Displacement brand plan**: a flat near-black panel, a slim
   ring, one accent colour (apricot) and a big value in the middle. The arc is lighter at the quiet
   end. Around 85% of the range it warms to Volcanic Amber, the brand's colour for "approaching the
-  limit", and around 95% to a deep red-orange, as *Approaching the limit.* fades in under the knob.
-  Each colour blends into the next, with no hard edges.
-- **The name is drawn like the brand logo**, in Sora Bold with a growing wave under it, and the
-  ring mark sits in the top-left corner.
+  limit", and around 95% to a deep red-orange. Then *Approaching the limit.* fades in by the end of
+  the arc. Each colour blends into the next, with no hard edges.
+- **The name is in the logo's font**, Sora Bold. The brand logo itself, with its growing wave,
+  sits bottom left, and the ring mark top left. Click the ring mark and a panel says the website is
+  under construction.
+- **The ? button, top right, opens a quick-start guide** over the controls. Its text is a Markdown
+  file compiled into the plugin, so it works offline, with a link to these docs at the end.
 - **It's tested without a screen.** JUCE can build a component, lay it out and paint it into an
-  image in memory. 34 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
+  image in memory. 45 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
 - **Nothing permanent changed.** The parameter id, range and saved format are untouched; the
   editor only *reads and writes* the parameter.
 
@@ -60,9 +63,15 @@ An editor is a **`juce::Component`**. Everything visible in a JUCE app is one: w
 sliders, labels. Components nest, so the window is a tree:
 
 ```
-SimpleGainAudioProcessorEditor     (the window, which paints the background and the lockup)
-├── titleLabel                     (a juce::Label: SIMPLY GAIN)
-└── gainSlider                     (a juce::Slider, which owns its own value text box)
+SimpleGainAudioProcessorEditor     (the window, which paints the background)
+├── title                          (a juce::Label: simply gain)
+├── gainSlider                     (a juce::Slider, which owns its own value text box)
+├── limitReadout                   (a FadingLabel: Approaching the limit.)
+├── logo                           (a Wordmark: the brand logo)
+├── guide                          (a GuideView: the quick start, hidden until opened)
+├── websitePanel                   (a WebsitePanel: "Under construction", hidden until opened)
+├── guideButton                    (a GuideButton: the ? in the top-right corner)
+└── markButton                     (a MarkButton: the ring mark in the top-left corner)
 ```
 
 | JUCE                        | WPF                              | WinForms               |
@@ -116,14 +125,14 @@ conversions; in C++ you opt out of them with `explicit`.
 ## 3. The knob and the title
 
 ```cpp
-title.setText (p.getName().toLowerCase());
+title.setText (p.getName().toLowerCase(), juce::dontSendNotification);
 
 gainSlider.setComponentID ("gainSlider");
 gainSlider.setTitle ("Gain");
 gainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 0, 0);    // getSliderLayout() places it
 ```
 
-- **The title** is the product name in lower case, drawn like the brand logo (section 14).
+- **The title** is the product name in lower case, in the logo's font, Sora Bold (section 9).
   `getName()` returns `JucePlugin_Name`, which CMake makes from `PRODUCT_NAME`, so the window, the
   host's plugin list and the bundle names can't disagree. Renaming the plugin is one line in
   `CMakeLists.txt`.
@@ -132,8 +141,8 @@ gainSlider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 0, 0);    // getS
 - **The text box** shows the value in the middle of the ring, and you click it to type a number.
   The `false` means it's *not* read-only. "Below" and the two zeros don't matter: the look-and-feel
   decides where the box goes (section 9).
-- **Colours** are the brand plan's tokens, set once in a `tokens` namespace at the top of
-  `PluginEditor.cpp`. `setColour` takes an *ID* (such as `textBoxTextColourId`) so each part can be
+- **Colours** are the brand plan's tokens, set once in a `tokens` namespace in
+  `Source/Brand.h`, which everything that draws includes. `setColour` takes an *ID* (such as `textBoxTextColourId`) so each part can be
   styled separately. The knob's own colours are used directly in its drawing code (section 13), so
   they need no IDs.
 - **`setComponentID ("gainSlider")`** gives the knob a name the tests can look it up by,
@@ -194,9 +203,14 @@ The members are declared in this order:
 
 ```cpp
 SimpleGainLookAndFeel lookAndFeel;
-Wordmark title { lookAndFeel };
+juce::Label title;
 RelativeRotarySlider gainSlider;
 FadingLabel limitReadout;
+Wordmark logo { lookAndFeel };
+GuideView guide { lookAndFeel };
+WebsitePanel websitePanel { lookAndFeel };
+GuideButton guideButton { lookAndFeel };
+MarkButton markButton { lookAndFeel };
 juce::AudioProcessorValueTreeState::SliderAttachment gainAttachment;
 ```
 
@@ -204,14 +218,14 @@ C++ **constructs members top to bottom in declaration order, and destroys them b
 — regardless of the order in the constructor's initialiser list. So here:
 
 ```
-construct:  lookAndFeel → title → gainSlider → limitReadout → gainAttachment
-destroy:    gainAttachment → limitReadout → gainSlider → title → lookAndFeel
+construct:  lookAndFeel → title → gainSlider → limitReadout → logo → gainAttachment
+destroy:    gainAttachment → logo → limitReadout → gainSlider → title → lookAndFeel
 ```
 
 That's right, because of what each part does:
 
 - The look-and-feel (section 9) is used by the widgets, so it has to be built before them and
-  destroyed after them. The title even holds a reference to it, to get its font.
+  destroyed after them. The logo even holds a reference to it, to get its font.
 - The attachment's *constructor* uses the slider, so the slider has to exist first.
 - The attachment's *destructor* calls `slider.removeListener (this)`. If the slider were already
   gone, that would touch freed memory — a use-after-free, the bug described in
@@ -228,16 +242,10 @@ member is safe to declare next to the thing it owns: the destructors run in a kn
 
 ---
 
-## 6. `paint()`: drawing the background, the ring mark and the lockup
+## 6. `paint()`: drawing the background
 
 ```cpp
 g.fillAll (tokens::base);
-
-g.setColour (tokens::muted);
-drawRingMark (g, { margin + markRadius * 1.09f, height * 0.1f }, markRadius);
-
-g.setFont (lookAndFeel.monoFont (height * 0.035f));
-g.drawText (title.getText().toUpperCase() + brandLine, lockupArea, juce::Justification::centredLeft);
 ```
 
 JUCE calls `paint` whenever part of the window needs redrawing: the first time, after a resize,
@@ -245,20 +253,15 @@ after something moves. **We never call it ourselves.** To ask for a redraw you'd
 `repaint()`, which schedules one.
 
 `juce::Graphics` is the drawing context — WinForms' `Graphics`, or a WPF `DrawingContext`. The
-editor paints only the background, the ring mark and the lockup; **children paint themselves**,
-and JUCE draws them on top afterwards. The knob, the title and the readout aren't drawn here.
+editor paints only the background; **children paint themselves**, and JUCE draws them on top
+afterwards. Everything else, from the title to the corner buttons, is a child.
 
 - **The background is flat**: one colour, Base (`#121417`), shared by every plugin in the family.
   No gradient and no glow, as the brand plan asks.
-- **The ring mark** is the brand's small logo, in the top-left corner as in the mock-ups. It's
-  three circles, drawn in code (section 14).
-- **The lockup** is the brand line along the bottom left: `SIMPLY GAIN // maxximum displacement`.
-  The product name comes first in capitals, then the brand in lower case, all in the mono font
-  and the muted colour.
+- **The ring mark** used to be painted here too. It's now a button that draws itself (section 16).
 
 `paint` can run many times a second while the window is dragged, so it should be cheap and
-shouldn't allocate much. Ours fills one colour, draws three circles and one line of text. The font size is
-`getHeight() * 0.035f`, a fraction of the window, so it scales with everything else.
+shouldn't allocate much. Ours fills one colour.
 
 ---
 
@@ -273,22 +276,28 @@ This window is simple enough to place things directly, as fractions of its heigh
 ```cpp
 const auto height = static_cast<float> (getHeight());
 
-title.setBounds (juce::Rectangle<float> (0.0f, height * 0.045f, width, height * 0.125f).toNearestInt());
+title.setBounds (juce::Rectangle<float> (0.0f, height * 0.05f, width, height * 0.1f).toNearestInt());
 
 const auto knobSize = height * 0.64f;
-gainSlider.setBounds (juce::Rectangle<float> (knobSize, knobSize).withCentre ({ width / 2.0f, height * 0.52f }).toNearestInt());
+gainSlider.setBounds (juce::Rectangle<float> (knobSize, knobSize).withCentre (getLocalBounds().getCentre().toFloat()).toNearestInt());
 
-limitReadout.setBounds (juce::Rectangle<float> (0.0f, height * 0.815f, width, height * 0.05f).toNearestInt());
+const auto knobArea = gainSlider.getBounds().toFloat();
+const auto arcEnd = knobArea.getCentre().getPointOnCircumference (SimpleGainLookAndFeel::ringRadius (knobArea),
+                                                                   gainSlider.getRotaryParameters().endAngleRadians);
+limitReadout.setBounds (juce::Rectangle<float>::leftTopRightBottom (arcEnd.x, height * 0.775f, width - margin, height * 0.825f).toNearestInt());
 ```
 
-- **The title** is a strip near the top, the full width, with the name and its wave centred.
-- **The knob** is a square, 64% of the height, centred across and a little below the middle. That
-  leaves the title's wave room above the ring. The ring ends up about the same size, relative to the
-  window, as in the brand plan's mock-up.
-- **The readout** is a strip below the gap at the bottom of the ring, with room between it and the
-  ring's ends, and between it and the lockup.
-- **The ring mark and the lockup** aren't children, so they have no bounds. `paint()` draws them
-  (section 6).
+- **The title** is a strip near the top, the full width, with the name centred.
+- **The knob** is a square, 64% of the height, centred in the window. The ring ends up about the
+  same size, relative to the window, as in the brand plan's mock-up.
+- **The readout** starts just under the end of the arc, at the bottom right, and runs right. That's
+  where the cursor is when you turn up to the limit. `getPointOnCircumference` finds the arc's end
+  from the knob's end angle, so it stays in place at every size. The label's border is set to none,
+  so its text starts exactly there.
+- **The logo** is a strip along the bottom left, half the width, as far from the bottom as the
+  ring mark is from the left.
+- **The corner buttons** mirror each other: the ring mark top left and the ? top right, the same
+  size, the same distance from their edges, and level with the title's letters.
 
 `getLocalBounds()` is the component's own area with its top-left at (0, 0); `getBounds()` would
 be relative to its parent. JUCE calls `resized()` when the size first changes and on every later
@@ -361,10 +370,10 @@ It also hands out the fonts, `textFont`, `monoFont` and `logoFont`, to everythin
 ### The brand fonts, built into the plugin
 
 The brand plan uses **Inter** for text and **JetBrains Mono** for readouts and the brand line. The
-logo is set in **Sora Bold**, so the title uses that too. A plugin can't rely on a font being
+logo is set in **Sora Bold**, so the title and the logo use that. A plugin can't rely on a font being
 installed on the user's machine, so all three are compiled in.
 CMake's `juce_add_binary_data` turns each `.ttf` in `assets/fonts/` into a byte array in a
-generated `BinaryData` namespace:
+generated `BinaryData` namespace. (The guide's text is compiled in the same way, section 15.)
 
 ```cpp
 inter (juce::Typeface::createSystemTypefaceFor (BinaryData::InterRegular_ttf,
@@ -559,36 +568,37 @@ the whole change. A test checks it hasn't been swapped back.
 ## 12. Testing a GUI with no screen
 
 A common assumption is that GUIs can't be tested automatically. They can, as far as *behaviour*
-goes, because a component doesn't need a window to exist. The 24 tests in
+goes, because a component doesn't need a window to exist. The 26 tests in
 `tests/EditorTests.cpp` (group **Editor**) create the real editor and drive it:
 
-| Test                                           | What it proves                                                                      |
-|------------------------------------------------|-------------------------------------------------------------------------------------|
-| The plugin offers its own editor               | `createEditor()` returns *our* editor, not JUCE's generic one                       |
-| Opens at 480×320 and grows to 200%             | The opening size, the limits and the 3:2 shape                                      |
-| The knob starts at the fader's position        | A plugin reopened at −6 dB doesn't show 0                                           |
-| Turning the knob moves the parameter           | Knob → parameter, across the whole range                                            |
-| The host moves the parameter, the knob follows | Parameter → knob, across the whole range                                            |
-| The text box shows and accepts the right text  | `−6.0 dB` out, `-12`, `-12 dB` and `+4.5` in                                        |
-| Range and double-click reset                   | −60..+30 and a 0 dB reset                                                           |
-| Layout at every size                           | Nothing sticks out of the window at the minimum, opening and maximum sizes          |
-| The value text scales                          | It grows with the window, always fits its box, and the readout's font is left alone |
-| It actually draws                              | A flat Base background, a quiet resize grip, and a knob that is really in the image |
-| The knob sweeps 1.2π to 2.8π                   | The gap at the bottom, as in the brand plan                                         |
-| The arc                                        | From the minimum to the value, over a dim track, and nothing in the gap             |
-| The ring is slim                               | Its stroke is 2.5% of the diameter                                                  |
-| The quiet end                                  | Lighter at the start, blending to apricot by halfway                                |
-| The colours blend                              | Walking along the arc, the colour never jumps: no hard edges                        |
-| The amber warm-up                              | Amber around 85% of the range, and not before                                       |
-| The ember at the limit                         | A deep red-orange around 95%, and not before                                        |
-| The limit readout                              | Fades in entering the red and out leaving it, in amber, with room under the ring    |
-| The knob is flat                               | No face, ticks, glow or thumb dot, inside or around the ring                        |
-| The value in the middle                        | Centred in the ring, with a muted caption beneath                                   |
-| A readable caption                             | "GAIN" is about 10 pixels tall at the opening size                                  |
-| Name and fonts                                 | "simply gain" in Sora, the value in Inter, the lockup bottom left                   |
-| The wordmark                                   | Muted, a growing wave under it, the last letter knocked up but not too far          |
-| The ring mark                                  | Top left, muted, round, its inner circles pushed off-centre                         |
-| Opening and closing                            | 50 open/close cycles, and the parameter moving while *no* editor exists             |
+| Test                                           | What it proves                                                                       |
+|------------------------------------------------|--------------------------------------------------------------------------------------|
+| The plugin offers its own editor               | `createEditor()` returns *our* editor, not JUCE's generic one                        |
+| Opens at 480×320 and grows to 200%             | The opening size, the limits and the 3:2 shape                                       |
+| The knob starts at the fader's position        | A plugin reopened at −6 dB doesn't show 0                                            |
+| Turning the knob moves the parameter           | Knob → parameter, across the whole range                                             |
+| The host moves the parameter, the knob follows | Parameter → knob, across the whole range                                             |
+| The text box shows and accepts the right text  | `−6.0 dB` out, `-12`, `-12 dB` and `+4.5` in                                         |
+| Range and double-click reset                   | −60..+30 and a 0 dB reset                                                            |
+| Layout at every size                           | Nothing sticks out of the window at the minimum, opening and maximum sizes           |
+| The value text scales                          | It grows with the window, always fits its box, and the readout's font is left alone  |
+| It actually draws                              | A flat Base background, a quiet resize grip, and a knob that is really in the image  |
+| The knob sweeps 1.2π to 2.8π                   | The gap at the bottom, as in the brand plan                                          |
+| The arc                                        | From the minimum to the value, over a dim track, and nothing in the gap              |
+| The ring is slim                               | Its stroke is 2.5% of the diameter                                                   |
+| The quiet end                                  | Lighter at the start, blending to apricot by halfway                                 |
+| The colours blend                              | Walking along the arc, the colour never jumps: no hard edges                         |
+| The amber warm-up                              | Amber around 85% of the range, and not before                                        |
+| The ember at the limit                         | A deep red-orange around 95%, and not before                                         |
+| The limit readout                              | Fades in entering the red and out leaving it, in amber, starting under the arc's end |
+| The knob is flat                               | No face, ticks, glow or thumb dot, inside or around the ring                         |
+| The value in the middle                        | Centred in the ring, with a muted caption beneath                                    |
+| A readable caption                             | "GAIN" is about 10 pixels tall at the opening size                                   |
+| Name and fonts                                 | "simply gain" in Sora, the value in Inter, the logo bottom left                      |
+| A plain title                                  | Muted, no wave under it, and its last letter level with its first                    |
+| The brand logo                                 | Bottom left, muted, a growing wave under it, the t knocked up but not too far        |
+| The ring mark                                  | Top left, muted, round, its inner circles pushed off-centre                          |
+| Opening and closing                            | 50 open/close cycles, and the parameter moving while *no* editor exists              |
 
 The 9 tests in `tests/KnobDragTests.cpp` (group **Knob dragging**) send the knob the same mouse
 events JUCE would, from a fake mouse:
@@ -605,9 +615,13 @@ events JUCE would, from a fake mouse:
 | Scroll on the number           | Scrolling over the number nudges the gain up and back down in small steps                           |
 | The cursor shows up and down   | Up-and-down arrows over the number, the normal pointer over the ring                                |
 
+The 6 tests in `tests/GuideTests.cpp` (group **Guide**) cover the quick-start guide (section 15),
+and the 4 in `tests/WebsitePanelTests.cpp` (group **Website panel**) the ring mark's panel
+(section 16).
+
 The tests were **written first**. Against the old generic editor, 8 tests passed and 10 failed; then the editor made them
 pass. The brand look was done the same way: its tests failed against the earlier purple knob, then
-passed. The editor and knob have since been deliberately broken in seventy-two ways to prove the tests notice
+passed. The editor and knob have since been deliberately broken in a hundred and five ways to prove the tests notice
 (see [Testing](testing.md#how-i-know-they-can-fail)). Some were only caught after I fixed the
 tests: an invisible knob slipped past the first "it draws" test, and forgetting to detach the
 look-and-feel was invisible until the test app began counting JUCE's assertions.
@@ -647,17 +661,17 @@ The brand plan names a small set of colours, shared by every plugin, the games a
 They're called **tokens**: a name for a job, with a value. Code says `tokens::line`, not
 `0xff2a2e34`, so the job is clear and a colour can change in one place.
 
-| Token   | Value     | Used for                                                       |
-|---------|-----------|----------------------------------------------------------------|
-| Base    | `#121417` | The background                                                 |
-| Surface | `#1B1E22` | The value box while you're typing in it                        |
-| Line    | `#2A2E34` | The ring's track, and the resize grip                          |
-| Text    | `#E8EAED` | The value                                                      |
-| Muted   | `#8A9099` | The name at the top, the ring mark, the caption and the lockup |
-| Apricot | `#F2A766` | The arc. Simply Gain's own accent; no paid plugin uses it      |
-| Quiet   | `#F8D3B0` | A lighter apricot for the quiet end of the arc                 |
-| Amber   | `#FF8A1F` | Volcanic Amber: the arc past 85%, and the limit readout        |
-| Ember   | `#D93A1E` | A deep red-orange for the arc's last 5%                        |
+| Token   | Value     | Used for                                                     |
+|---------|-----------|--------------------------------------------------------------|
+| Base    | `#121417` | The background                                               |
+| Surface | `#1B1E22` | The value box while you're typing in it                      |
+| Line    | `#2A2E34` | The ring's track, and the resize grip                        |
+| Text    | `#E8EAED` | The value                                                    |
+| Muted   | `#8A9099` | The name at the top, the ring mark, the caption and the logo |
+| Apricot | `#F2A766` | The arc. Simply Gain's own accent; no paid plugin uses it    |
+| Quiet   | `#F8D3B0` | A lighter apricot for the quiet end of the arc               |
+| Amber   | `#FF8A1F` | Volcanic Amber: the arc past 85%, and the limit readout      |
+| Ember   | `#D93A1E` | A deep red-orange for the arc's last 5%                      |
 
 Quiet and Ember aren't in the brand plan: they're Simply Gain's own, added on top of it.
 
@@ -783,11 +797,12 @@ They can't say whether it looks *good*. The snapshot pictures above are for that
 
 Three small things finish the window. Each is drawn in code, so it stays sharp at every size.
 
-### The title, drawn like the logo
+### The brand logo
 
 The brand logo is the company name in lower case, in Sora Bold, with *"a sound wave running under
-it, growing as it goes, until its last crest knocks the final letter upwards"*. The title does the
-same with the plugin's name, in one colour, muted. It's a small component of its own, `Wordmark`.
+it, growing as it goes, until its last crest knocks the final letter upwards"*. It sits along the
+bottom left, in one colour, muted, as the plan asks at small sizes. It's a small component of its
+own, `Wordmark`, drawn from its left edge.
 
 - **The letters.** A `juce::GlyphArrangement` lays the text out as positioned glyphs, one per
   letter, like WPF's `GlyphRun`. Every glyph but the last is drawn where it sits.
@@ -805,7 +820,10 @@ no wave appeared. The pixel test caught it.
 
 **C# comparison.** `Wordmark` keeps a `const SimpleGainLookAndFeel&` member, for its font. A
 reference member is like a `readonly` field that can never be null. It's safe because the editor
-declares the look-and-feel first, so it outlives the title (section 5).
+declares the look-and-feel first, so it outlives the logo (section 5).
+
+The title at the top was drawn this way too, at first, with its own wave and a knocked-up *n*.
+It's now a plain `juce::Label` in Sora, so the wave belongs to the brand alone.
 
 ### The ring mark
 
@@ -819,8 +837,8 @@ sizes were measured from the plan's drawing, as fractions of the outer ring's ra
 | The dot     | 0.44 to the right | 0.23   | filled |
 
 It's muted, as the plan asks (*"off-white or muted grey. Not amber"*). On the paid plugins it will
-also be the button that flips the panel over. Simply Gain has no flip side, so here it's only the
-logo.
+also be the button that flips the panel over. Simply Gain has no flip side, so here it opens a
+panel about the website instead (section 16).
 
 ### "Approaching the limit."
 
@@ -829,7 +847,8 @@ arc enters the ember, past 95%, and goes again below that. It's in the mono font
 for readouts) and in amber, which is readable on Base at a small size.
 
 It **fades** rather than snapping on. `FadingLabel` is a `juce::Label` that is also a
-`juce::Timer`:
+`juce::Timer`. It's written once, in `Source/Fading.h`, as a **template**: `Fading<juce::Label>` is
+the readout, and `Fading<juce::Component>` is the guide (section 15).
 
 - `fadeTo (true)` starts a timer at 60 Hz. Each tick moves the fade on by the real time since the
   last one, so a late tick doesn't slow it. A whole fade takes 0.35 seconds.
@@ -847,3 +866,125 @@ that the readout is part-way after 0.1 seconds, which is what proves it fades.
 thread, so it can touch components safely. Inheriting from it *privately* (`private juce::Timer`)
 hides `startTimer` and the rest from other code. C# has no private inheritance; the nearest is
 keeping a timer as a private field.
+
+**C# comparison: templates.** `template <typename ComponentType> class Fading : public ComponentType`
+looks like a C# generic, but works differently. C# compiles one generic class and fills in the type
+at run time. C++ writes out a separate class for each type it's used with, at compile time. That's
+why a template's code lives in its header: the compiler needs all of it wherever the template is
+used. One oddity: inside the template, calls to the base class need `this->`, as in
+`this->setAlpha (...)`. The base is a type parameter, so C++ won't look inside it unless told to.
+
+---
+
+## 15. The quick-start guide
+
+The **?** button in the top-right corner opens a guide over the controls. It mirrors the ring mark:
+the same size, the same distance from its edge, and level with it. While the guide is open the ?
+becomes a × that closes it. It follows the brand plan's design: *"a component laid over the
+controls with a short fade"*, whose text is *"embedded as binary data, so the guide works
+offline"*.
+
+![The guide open at the opening size](images/editor-guide.png)
+
+### The text is a Markdown file
+
+The words live in `guide/quick-start.md`, not in C++. CMake compiles it into the plugin with the
+fonts (`juce_add_binary_data`), and `guide::quickStart()` reads it back as a `juce::String`. GitHub
+shows the same file, so the guide in the plugin and the one online can't drift apart. Editing the
+guide means editing that file, then rebuilding.
+
+It starts simple, *Like you're five*, for any musician, then *Good for*, then *For the nerds*. A
+test checks the order, and that every way to use the knob is mentioned.
+
+### Reading it: a very small Markdown reader
+
+Full Markdown is a big language. The guide needs four things, so `guide::parse` reads only those:
+
+| Markdown        | Becomes                         |
+|-----------------|---------------------------------|
+| `# quick start` | the title, shown above the page |
+| `## A heading`  | a heading, in Sora Bold         |
+| a paragraph     | text, wrapped to the width      |
+| `- a bullet`    | an indented line with a bullet  |
+
+Lines that carry on a paragraph or bullet are joined to it, and a blank line ends it. Inside a
+line, `guide::style` handles two marks: `**bold**` turns apricot, and `` `code` `` uses the mono
+font. It builds a `juce::AttributedString`: one string with a font and colour for each run, like
+WPF's `Run` elements inside a `TextBlock`.
+
+### Laying it out
+
+Each block becomes a `juce::TextLayout`, which wraps the text to a width and reports its height.
+`GuidePage` stacks them, with gaps that are fractions of the text's height, then ends with a
+`juce::HyperlinkButton` to these docs on GitHub. That link is the only thing in the plugin that
+can open the network, and only when it's clicked.
+
+The page sits in a `juce::Viewport`, JUCE's `ScrollViewer`: a window onto a taller component,
+with a scroll bar when needed. The text is 4.2% of the window's height, but **never below 12
+pixels**. At the smallest window it doesn't fit, so it scrolls, rather than shrinking past
+readable.
+
+### Opening and closing
+
+- `GuideView` is a `Fading<juce::Component>` (section 14), so it fades in and out like the
+  readout.
+- It's added before the corner buttons, and JUCE stacks children in the order they're added, so
+  the buttons stay on top and can always close it.
+- It paints an opaque Base background over everything, and takes the clicks there. So the knob
+  can't be turned by accident while the guide is open. A test checks that JUCE's own hit test
+  finds the guide, not the knob.
+- Whether it's open isn't a parameter and isn't saved. A project always reopens on the controls.
+
+The plan has a few more ideas the guide doesn't do yet: cards with next and back, a small picture
+on each, and Esc to close. One page, with the ? to close it, is enough for one knob.
+
+---
+
+## 16. The ring mark's panel, and the corner buttons
+
+Click the ring mark, top left, and a panel fades in over the controls: *Under construction 🚧*,
+then *The website will be linked here in a future update*. It's a placeholder. When the website
+exists, this is where it'll be linked from.
+
+![The website panel open](images/editor-website.png)
+
+### Two buttons, one base class
+
+The ring mark and the ? are both corner buttons, so they share a base class, `CornerButton`, in
+`Source/CornerButtons.h`. It does what they have in common: the ring's size, the muted colour
+that brightens under the mouse, and a × while the button's panel is open. Each kind only draws its
+own symbol, through one function:
+
+```cpp
+virtual void paintSymbol (juce::Graphics&, juce::Point<float> centre, float radius) = 0;
+```
+
+The `= 0` makes it **pure virtual**: `CornerButton` can't be made on its own, and every class
+deriving from it has to write the function. `GuideButton` draws a ring and a ?, and `MarkButton`
+draws the ring mark's three circles, moved here from the editor's `paint()`.
+
+**C# comparison.** That's an `abstract` class with an `abstract` method. `paintButton` calling
+`paintSymbol` is the *template method* pattern, the same in both languages.
+
+### Only one panel at a time
+
+The editor has a small `enum class Panel { none, guide, website }` and one function that shows a
+panel:
+
+```cpp
+guide.fadeTo (panel == Panel::guide);
+websitePanel.fadeTo (panel == Panel::website);
+guideButton.setToggleState (panel == Panel::guide, juce::dontSendNotification);
+markButton.setToggleState (panel == Panel::website, juce::dontSendNotification);
+```
+
+Each button asks for its own panel, or for none if its panel is already open. So opening one
+panel fades the other out, and the buttons always show which is open. The guide's title moved
+right to make room for the ring mark, which now stays on top.
+
+### The emoji
+
+None of the brand fonts has a 🚧. JUCE 8 turns on **font fallback** by default: when a font is
+missing a character, it asks macOS for one that has it. That finds Apple's colour emoji font, so
+the sign is drawn in colour, in the middle of a Sora Bold heading. A test checks the character is
+in the text; the snapshot above shows it really draws.
