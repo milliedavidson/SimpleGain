@@ -24,6 +24,7 @@ are permanent. The file itself keeps its comments short and points here.
 - **`PRIVATE` / `PUBLIC` control what flows on** to the format wrappers. JUCE's own docs say to
   link its three flag targets `PUBLIC`, so every wrapper gets the same flags.
 - **Debug builds are unoptimised** (`-O0`, no LTO). Judge audio performance on a Release build.
+- **The oldest macOS it runs on is set before `project()`**: macOS 11.
 - **The test app is a second target** that's excluded from the normal build, because it compiles
   JUCE again. `cmake --build build --target check` builds and runs it.
 
@@ -61,7 +62,14 @@ builds JUCE's small helper tool, `juceaide`, which JUCE needs in order to genera
 
 ```cmake
 cmake_minimum_required(VERSION 3.22)
+
+if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Oldest macOS version to run on" FORCE)
+endif()
+
 project(SimpleGain VERSION 0.1.0 LANGUAGES C CXX)
+
+option(SIMPLEGAIN_INSTALL_AFTER_BUILD "Copy the plugins into ~/Library/Audio/Plug-Ins after building" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -69,6 +77,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 **`cmake_minimum_required(VERSION 3.22)`** — this file needs at least that CMake. It matches
 JUCE's own `CMakeLists.txt`, which asks for the same, so there's no point asking for less.
+
+**`CMAKE_OSX_DEPLOYMENT_TARGET`** — the oldest macOS the plugin runs on. `project()` reads it while
+setting up the compiler, so it has to come first. Left empty, it would be the SDK's own version,
+too new for most Macs. The `if` keeps any value given on the command line with `-D`, and `FORCE`
+replaces an empty one already in the cache. Why 11.0: [Identity & macOS §6](plugin-identity-and-macos.md#6-sending-it-to-someone-universal-builds-signing-and-gatekeeper).
+
+**`option(...)`** — a yes/no setting with a default, which `-D` can change. This one switches off
+the automatic install (§4) when `scripts/package-mac.sh` builds a package.
 
 **`project(... VERSION 0.1.0 ...)`** — names the project and gives it a version. JUCE uses that
 version for the plugin; it's the `0.1.0` that showed up in the standalone app's crash report.
@@ -184,8 +200,8 @@ host owns the microphone. Full story: [Identity & macOS §4](plugin-identity-and
 ```cmake
 juce_add_plugin(SimpleGain
     FORMATS                     Standalone AU VST3
-    COPY_PLUGIN_AFTER_BUILD     TRUE
-    PRODUCT_NAME                "Simply Gain"
+    COPY_PLUGIN_AFTER_BUILD     ${SIMPLEGAIN_INSTALL_AFTER_BUILD}
+    PRODUCT_NAME                "simply gain"
     # ... more arguments
     )
 ```
@@ -195,13 +211,14 @@ enabled only when building there — which is why CI has to run on a macOS runne
 
 **`COPY_PLUGIN_AFTER_BUILD`** installs the AU and VST3 into `~/Library/Audio/Plug-Ins/` after
 every build, so your DAW finds them with no manual step. The catch is that **every build
-overwrites whatever your DAW loads**, including Debug builds (see §8).
+overwrites whatever your DAW loads**, including Debug builds (see §8). It takes the `option` from
+§2, which is on unless a build turns it off.
 
 **`PRODUCT_NAME`** is the filename of the built plugin. The name the DAW displays is
 `PLUGIN_NAME`, which defaults to `PRODUCT_NAME`. It can differ from the target's name, and here it
 does: the target is `SimpleGain`, a CMake identifier with no spaces, while the product is
-`Simply Gain`. So the targets and build folders keep `SimpleGain` (`SimpleGain_Standalone`,
-`build/SimpleGain_artefacts/`), and the bundles inside them are called `Simply Gain`. A name with a
+`simply gain`. So the targets and build folders keep `SimpleGain` (`SimpleGain_Standalone`,
+`build/SimpleGain_artefacts/`), and the bundles inside them are called `simply gain`. A name with a
 space needs quotes in a shell command.
 
 ---
@@ -212,7 +229,8 @@ space needs quotes in a shell command.
 target_sources(SimpleGain
     PRIVATE
         Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp)
+        Source/PluginEditor.cpp
+        Source/Guide.cpp)
 ```
 
 Only the `.cpp` files are listed. Headers don't need to be: a `.cpp` `#include`s them, so the
@@ -358,11 +376,10 @@ With the Makefile generator, one build folder is one build type, hence the separ
 
 ## 9. What isn't in the file yet
 
-| Missing                                  | Why                                                                                                                  | When                         |
-|------------------------------------------|----------------------------------------------------------------------------------------------------------------------|------------------------------|
-| `CMAKE_OSX_ARCHITECTURES "x86_64;arm64"` | Builds currently match the machine's own architecture, so an Intel Mac builds Intel-only.                            | Phase 8 — universal binary   |
-| `CMAKE_OSX_DEPLOYMENT_TARGET`            | Unset, so it follows the SDK you build with, which can make the plugin refuse to load on older macOS versions.       | Decide before release        |
-| `juce_generate_juce_header`              | Deliberately omitted — we `#include` module headers directly, which compiles faster and keeps dependencies explicit. | Never — it's a design choice |
+| Missing                                  | Why                                                                                                                   | When                         |
+|------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|------------------------------|
+| `CMAKE_OSX_ARCHITECTURES "x86_64;arm64"` | Everyday builds match the machine's own chip, which is quicker. `scripts/package-mac.sh` passes it with `-D` instead. | Only for packages            |
+| `juce_generate_juce_header`              | Deliberately omitted — we `#include` module headers directly, which compiles faster and keeps dependencies explicit.  | Never — it's a design choice |
 
 ---
 
@@ -397,7 +414,8 @@ target_sources(SimpleGain_Tests
         tests/GainSmoothingTests.cpp
         ...
         Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp)
+        Source/PluginEditor.cpp
+        Source/Guide.cpp)
 ```
 
 The tests compile the plugin's **own two source files again**, straight into the test app, rather
@@ -407,7 +425,7 @@ code and the same compiler flags without untangling what the JUCE-generated targ
 ```cmake
 target_compile_definitions(SimpleGain_Tests
     PRIVATE
-        "JucePlugin_Name=\"Simply Gain\""
+        "JucePlugin_Name=\"simply gain\""
         JUCE_LOG_ASSERTIONS=1
         ...)
 ```

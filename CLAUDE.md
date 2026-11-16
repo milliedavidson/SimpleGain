@@ -134,10 +134,14 @@ script rather than a sentence here.
 ```
 CMakeLists.txt              the build script
 libs/JUCE/                  JUCE 8, as a git submodule — not committed source
-Source/                     the plugin: PluginProcessor.{h,cpp}, PluginEditor.{h,cpp}
+Source/                     the plugin: PluginProcessor, PluginEditor, Guide, WebsitePanel, CornerButtons,
+                            plus Brand.h (colours) and Fading.h
+guide/quick-start.md        the guide behind the plugin's ? button, compiled into the plugin
 tests/                      the offline tests — `cmake --build build --target check`
 .github/workflows/build.yml CI — builds all 3 formats, validates the AU with auval
 scripts/check-docs.py         verifies the docs hang together — see "Keep the docs in step"
+scripts/package-mac.sh        builds the zip to send to someone (universal Release, ad hoc signed)
+packaging/                  what goes in that zip besides the plugins (the install note)
 documentation/              the reasoning behind the code — see documentation/README.md
 documentation/images/banner.svg   README hero image
 ```

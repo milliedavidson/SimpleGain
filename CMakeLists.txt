@@ -7,7 +7,19 @@
 # =============================================================================
 
 cmake_minimum_required(VERSION 3.22)                # same minimum JUCE asks for
+
+# The oldest macOS it runs on. It must be set before project(). Left empty, it would be
+# this Mac's own version, which can be too new for someone else's.
+# -> documentation/plugin-identity-and-macos.md section 6
+if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Oldest macOS version to run on" FORCE)
+endif()
+
 project(SimpleGain VERSION 0.1.0 LANGUAGES C CXX)   # JUCE bundles C libraries too
+
+# On for everyday work. scripts/package-mac.sh turns it off, so building a package
+# doesn't overwrite the plugins installed on this Mac.
+option(SIMPLEGAIN_INSTALL_AFTER_BUILD "Copy the plugins into ~/Library/Audio/Plug-Ins after building" ON)
 
 # JUCE needs C++17. REQUIRED = fail rather than quietly fall back to older.
 # -> documentation/cmake-walkthrough.md section 2
@@ -48,24 +60,30 @@ juce_add_plugin(SimpleGain
     BLUETOOTH_PERMISSION_TEXT       "Simply Gain uses Bluetooth to discover wireless MIDI devices."
 
     FORMATS                     Standalone AU VST3   # AU is macOS-only
-    COPY_PLUGIN_AFTER_BUILD     TRUE                 # installs into ~/Library/Audio/Plug-Ins
-    # The name hosts list and the bundles are called. The target and class names
-    # stay SimpleGain: they're internal. -> documentation/plugin-identity-and-macos.md section 1
-    PRODUCT_NAME                "Simply Gain")
+    COPY_PLUGIN_AFTER_BUILD     ${SIMPLEGAIN_INSTALL_AFTER_BUILD}    # into ~/Library/Audio/Plug-Ins
+    # The name hosts list and the bundles are called, in lower case like the logo. The
+    # target and class names stay SimpleGain: they're internal.
+    # -> documentation/plugin-identity-and-macos.md section 1
+    PRODUCT_NAME                "simply gain")
 
 # Source files are listed explicitly — an unlisted .cpp is silently not built.
 target_sources(SimpleGain
     PRIVATE
         Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp)
+        Source/PluginEditor.cpp
+        Source/Guide.cpp
+        Source/CornerButtons.cpp
+        Source/WebsitePanel.cpp)
 
-# The brand fonts, compiled into the plugin as byte arrays (BinaryData::...), so
-# it never depends on what's installed. Both are under the SIL Open Font License.
-# -> documentation/editor-gui.md section 9
-juce_add_binary_data(SimpleGain_Fonts
+# Files compiled into the plugin as byte arrays (BinaryData::...), so it never
+# depends on what's installed: the brand fonts (all under the SIL Open Font
+# License) and the guide's text. -> documentation/editor-gui.md sections 9 and 15
+juce_add_binary_data(SimpleGain_Assets
     SOURCES
         assets/fonts/Inter-Regular.ttf
-        assets/fonts/JetBrainsMono-Regular.ttf)
+        assets/fonts/JetBrainsMono-Regular.ttf
+        assets/fonts/Sora-Bold.ttf
+        guide/quick-start.md)
 
 # Build-time switches that remove JUCE features from the binary entirely.
 # JUCE_USE_CURL is Linux-only (a no-op on macOS); JUCE_VST3_CAN_REPLACE_VST2
@@ -82,7 +100,7 @@ target_compile_definitions(SimpleGain
 # -> documentation/cmake-walkthrough.md sections 7 and 8
 target_link_libraries(SimpleGain
     PRIVATE
-        SimpleGain_Fonts
+        SimpleGain_Assets
         juce::juce_audio_utils
     PUBLIC
         juce::juce_recommended_config_flags
@@ -107,22 +125,27 @@ target_sources(SimpleGain_Tests
         tests/CorruptStateTests.cpp
         tests/EditorTests.cpp
         tests/KnobDragTests.cpp
+        tests/GuideTests.cpp
+        tests/WebsitePanelTests.cpp
         tests/EditorSnapshots.cpp
         Source/PluginProcessor.cpp
-        Source/PluginEditor.cpp)
+        Source/PluginEditor.cpp
+        Source/Guide.cpp
+        Source/CornerButtons.cpp
+        Source/WebsitePanel.cpp)
 
 target_include_directories(SimpleGain_Tests PRIVATE Source tests)
 
 target_compile_definitions(SimpleGain_Tests
     PRIVATE
-        "JucePlugin_Name=\"Simply Gain\""  # normally supplied by juce_add_plugin
+        "JucePlugin_Name=\"simply gain\""  # normally supplied by juce_add_plugin
         JUCE_LOG_ASSERTIONS=1                # lets the tests filter JUCE's own assertion messages
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0)
 
 target_link_libraries(SimpleGain_Tests
     PRIVATE
-        SimpleGain_Fonts
+        SimpleGain_Assets
         juce::juce_audio_utils
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)

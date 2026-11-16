@@ -12,6 +12,10 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "PluginProcessor.h"
+#include "Fading.h"
+#include "Guide.h"
+#include "WebsitePanel.h"
+#include "CornerButtons.h"
 
 #include <optional>
 
@@ -28,9 +32,11 @@ class SimpleGainLookAndFeel final : public juce::LookAndFeel_V4
 public:
     SimpleGainLookAndFeel();
 
-    /** The brand's two fonts, at a height in pixels: Inter for text, JetBrains Mono for readouts. */
+    /** The brand's fonts, at a height in pixels: Inter for text, JetBrains Mono for readouts,
+        and Sora Bold for the logo. */
     [[nodiscard]] juce::FontOptions textFont (float height) const;
     [[nodiscard]] juce::FontOptions monoFont (float height) const;
+    [[nodiscard]] juce::FontOptions logoFont (float height) const;
 
     /** The ring's radius (the middle of its stroke) for a knob drawn in `knobArea`. */
     static float ringRadius (juce::Rectangle<float> knobArea);
@@ -43,7 +49,7 @@ public:
     /** The knob fills its whole area, and the value box sits in the middle of the ring. */
     juce::Slider::SliderLayout getSliderLayout (juce::Slider&) override;
 
-    /** The track, the arc (amber past the knee) and the caption under the value. */
+    /** The track, the arc (quiet, apricot, amber, then ember) and the caption under the value. */
     void drawRotarySlider (juce::Graphics&, int x, int y, int width, int height, float sliderPosProportional,
                            float rotaryStartAngle, float rotaryEndAngle, juce::Slider&) override;
 
@@ -53,7 +59,37 @@ public:
 private:
     // Typeface::Ptr is reference-counted, like a C# object reference: the font data lives
     // as long as something points at it.
-    juce::Typeface::Ptr inter, jetBrainsMono;
+    juce::Typeface::Ptr inter, jetBrainsMono, sora;
+};
+
+
+//==============================================================================
+/**
+    The brand logo: the name in lower case in Sora Bold, drawn from the left edge,
+    with a sound wave under it that grows until its last crest knocks the final
+    letter up. -> documentation/editor-gui.md section 14
+*/
+class Wordmark final : public juce::Component
+{
+public:
+    explicit Wordmark (const SimpleGainLookAndFeel&);
+
+    void setText (const juce::String&);
+    [[nodiscard]] const juce::String& getText() const noexcept   { return text; }
+    [[nodiscard]] juce::Font getFont() const;
+
+    /** Where letter `index` is drawn, the knocked-up last one included. */
+    [[nodiscard]] juce::Rectangle<float> letterBounds (int index) const;
+
+    void paint (juce::Graphics&) override;
+
+private:
+    [[nodiscard]] juce::GlyphArrangement layOut() const;
+    [[nodiscard]] juce::AffineTransform knockUp (const juce::PositionedGlyph&) const;
+    [[nodiscard]] juce::Path wave (const juce::GlyphArrangement&) const;
+
+    const SimpleGainLookAndFeel& lookAndFeel;     // a reference: the editor owns it, and outlives this
+    juce::String text;
 };
 
 
@@ -98,7 +134,8 @@ private:
 
 //==============================================================================
 /**
-    The window: the name at the top, a gain knob, and the brand lockup.
+    The window: the ring mark and the name at the top, a gain knob, the limit
+    readout under it, the brand logo, and the ? button that opens the guide.
 
     juce::AudioProcessorEditor is a juce::Component, JUCE's base class for
     anything drawable — roughly WPF's UIElement or WinForms' Control.
@@ -127,9 +164,22 @@ private:
     // first), and the attachment's destructor touches the slider (so it is last).
     // -> documentation/editor-gui.md section 5
     SimpleGainLookAndFeel lookAndFeel;
-    juce::Label titleLabel;
+    juce::Label title;
     RelativeRotarySlider gainSlider;
+    FadingLabel limitReadout;
+    Wordmark logo { lookAndFeel };
+    GuideView guide { lookAndFeel };
+    WebsitePanel websitePanel { lookAndFeel };
+    GuideButton guideButton { lookAndFeel };
+    MarkButton markButton { lookAndFeel };
     juce::AudioProcessorValueTreeState::SliderAttachment gainAttachment;
+
+    /** Which panel is over the controls. Only one is ever open. */
+    enum class Panel { none, guide, website };
+    void showPanel (Panel);
+
+    /** Is the knob past the start of the ember, the last stretch before the limit? */
+    [[nodiscard]] bool isInTheRed();      // not const: JUCE's valueToProportionOfLength() isn't
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleGainAudioProcessorEditor)
 };

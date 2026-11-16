@@ -8,3 +8,6 @@ cmake-build-*/
 
 # macOS
 .DS_Store
+
+# Packages made by scripts/package-mac.sh
+dist/

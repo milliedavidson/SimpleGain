@@ -1,0 +1,58 @@
+simply gain, a free gain plugin by maxximum displacement
+=========================================================
+
+What's in this folder
+---------------------
+  simply gain.component   the Audio Unit, for Logic Pro and GarageBand
+  simply gain.vst3        the VST3, for Ableton Live, Reaper and most other DAWs
+  Licences                the licences for the plugin, its fonts and its libraries
+
+It works on macOS 11 or later, on both Intel and Apple Silicon Macs.
+
+
+Installing it for Logic (about two minutes)
+-------------------------------------------
+1. Quit Logic.
+
+2. In Finder, choose Go > Go to Folder..., paste this, and press Return:
+
+       ~/Library/Audio/Plug-Ins/Components
+
+3. Drag "simply gain.component" into that folder.
+
+4. Tell macOS the plugin is safe. macOS blocks plugins downloaded from the
+   internet unless Apple has checked them, and this one hasn't been yet.
+   Open Terminal (in Applications > Utilities), paste this line, and press
+   Return:
+
+       xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"simply gain.component"
+
+   Nothing is printed when it works.
+
+5. Open Logic. It checks new plugins as it starts. You'll find this one in
+   any channel strip's Audio FX slot, under:
+
+       Audio Units > Maxximum Displacement > simply gain
+
+
+For other DAWs
+--------------
+Do the same with "simply gain.vst3", in this folder instead:
+
+       ~/Library/Audio/Plug-Ins/VST3
+
+and with this line in Terminal:
+
+       xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"simply gain.vst3"
+
+
+If Logic says it failed, or it doesn't appear
+---------------------------------------------
+Check step 4 was done. Then in Logic, choose Logic Pro > Settings >
+Plug-in Manager, find "simply gain", select it, and click
+"Reset & Rescan Selection".
+
+
+Source code
+-----------
+simply gain is open source: https://github.com/milliedavidson/simply-gain

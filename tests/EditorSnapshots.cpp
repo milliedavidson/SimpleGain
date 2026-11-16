@@ -11,14 +11,25 @@ namespace
 {
     using namespace support;
 
-    /** Paints the editor, as it would look at `width` x `height` with the gain at `db`. */
-    juce::Image snapshot (float db, int width, int height, float scale)
+    /** Paints the editor, as it would look at `width` x `height` with the gain at `db`,
+        and with one of its panels open if `openPanel` names its button. */
+    juce::Image snapshot (float db, int width, int height, float scale, const juce::String& openPanel = {})
     {
         SimpleGainAudioProcessor processor;
         setGainDb (processor, db);
 
         SimpleGainAudioProcessorEditor editor (processor);
         editor.setSize (width, height);
+
+        if (auto* button = dynamic_cast<juce::Button*> (editor.findChildWithID (openPanel)))
+        {
+            button->onClick();
+            if (auto* guide = dynamic_cast<GuideView*> (editor.findChildWithID ("guide")); guide != nullptr && openPanel == "guideButton")
+                guide->showNow (true);
+            if (auto* website = dynamic_cast<WebsitePanel*> (editor.findChildWithID ("websitePanel")); website != nullptr && openPanel == "markButton")
+                website->showNow (true);
+        }
+
         return editor.createComponentSnapshot (editor.getLocalBounds(), true, scale);
     }
 
@@ -69,11 +80,17 @@ bool writeEditorSnapshots (const juce::File& directory)
     // One sharp picture at the opening size.
     ok &= savePng (snapshot (0.0f, defaultWidth, defaultHeight, 2.0f), directory.getChildFile ("editor-default.png"));
 
-    // The same window with the fader in three different places.
+    // The same window quiet, in the amber, and in the red with the limit readout showing.
     ok &= savePng (sideBySide ({ snapshot (-30.0f, defaultWidth, defaultHeight, 1.0f),
-                                 snapshot (-12.3f, defaultWidth, defaultHeight, 1.0f),
-                                 snapshot (24.0f,  defaultWidth, defaultHeight, 1.0f) }, 24),
+                                 snapshot (20.0f,  defaultWidth, defaultHeight, 1.0f),
+                                 snapshot (28.0f,  defaultWidth, defaultHeight, 1.0f) }, 24),
                   directory.getChildFile ("editor-values.png"));
+
+    // The guide open, at the opening size.
+    ok &= savePng (snapshot (0.0f, defaultWidth, defaultHeight, 2.0f, "guideButton"), directory.getChildFile ("editor-guide.png"));
+
+    // The website panel open, at the opening size.
+    ok &= savePng (snapshot (0.0f, defaultWidth, defaultHeight, 2.0f, "markButton"), directory.getChildFile ("editor-website.png"));
 
     // The smallest (and opening) size, 150%, and the largest the window can be dragged to.
     ok &= savePng (sideBySide ({ snapshot (0.0f, limits->getMinimumWidth(), limits->getMinimumHeight(), 1.0f),

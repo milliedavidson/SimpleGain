@@ -30,6 +30,8 @@ way to do it, I'd love to hear it: see [Contributing](#contributing).
 
 🎚️ Builds as **Standalone**, **Audio Unit (AU)**, and **VST3** from one CMake project
 
+🎚️ A [quick-start guide](guide/quick-start.md) built into the plugin, behind the ? button
+
 🎚️ AU validated end-to-end with Apple's own `auval` — Logic and GarageBand will load it
 
 🎚️ Commented for people learning C++ — short notes in the code, with the full reasoning in
@@ -69,7 +71,7 @@ is essential — skip it and `libs/JUCE` will be empty, which produces a confusi
 rather than an obvious one.
 
 ```bash
-git clone --recurse-submodules https://github.com/milliedavidson/SimpleGain.git
+git clone --recurse-submodules https://github.com/milliedavidson/simply-gain.git
 ```
 
 ---
@@ -92,7 +94,7 @@ are incremental.
 **3. Run it**
 
 ```bash
-open "build/SimpleGain_artefacts/Debug/Standalone/Simply Gain.app"
+open "build/SimpleGain_artefacts/Debug/Standalone/simply gain.app"
 ```
 
 The Standalone build is the fast development loop — a real `.app` you can run without a DAW,
@@ -127,6 +129,19 @@ This builds a test app that drives the real processor with no DAW and no sound c
 it. The first build compiles JUCE a second time, so it takes a few minutes; the plugin build
 doesn't touch it.
 
+---
+
+**6. Package it to send to someone**
+
+```bash
+scripts/package-mac.sh
+```
+
+This makes `dist/simply-gain-0.1.0-mac.zip`: a Release build for Intel and Apple Silicon Macs,
+macOS 11 and later, with an install note. It isn't signed with an Apple Developer ID yet, so the
+note includes one Terminal command to get it past macOS's download check. See
+[Identity & macOS §6](documentation/plugin-identity-and-macos.md#6-sending-it-to-someone-universal-builds-signing-and-gatekeeper).
+
 <div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
 
 ---
@@ -145,7 +160,7 @@ goes deep.
 | [Parameters & automation](documentation/parameters-and-automation.md)       | APVTS, dB vs linear gain, skew, thread-safe parameter reads                                    |
 | [Smoothing & the audio loop](documentation/smoothing-and-the-audio-loop.md) | Zipper noise and `SmoothedValue`, loop order, raw pointers, denormals                          |
 | [State: save and restore](documentation/state-save-and-restore.md)          | What a host stores, `ValueTree` → XML → bytes, loading untrusted data safely                   |
-| [Identity & macOS](documentation/plugin-identity-and-macos.md)              | Bundle IDs, 4-character codes, `auval`, privacy permissions                                    |
+| [Identity & macOS](documentation/plugin-identity-and-macos.md)              | Bundle IDs, 4-character codes, `auval`, privacy permissions, packaging and signing             |
 | [The editor (GUI)](documentation/editor-gui.md)                             | Components, the two-way `SliderAttachment`, member order, layout, testing a GUI with no screen |
 | **C++ foundations**                                                         |                                                                                                |
 | [Memory model](documentation/cpp-memory-model.md)                           | Stack vs heap, references vs pointers, RAII vs garbage collection                              |
@@ -177,7 +192,8 @@ built and run.
 - [x] State save/restore — the gain survives closing and reopening a project, and corrupt data can't crash it
 - [x] Automated tests — `cmake --build build --target check`, run on every push
 - [x] A real GUI — a resizable knob editor in the Maxximum Displacement brand look, two-way bound to the parameter, tested without a screen
-- [ ] Universal binary (Apple Silicon + Intel)
+- [x] Universal binary (Apple Silicon + Intel), packaged as a zip with `scripts/package-mac.sh`
+- [ ] Signed and notarised installer (needs an Apple Developer ID)
 
 <div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
 
@@ -210,9 +226,10 @@ Simply Gain's own source code is licensed under the [MIT License](LICENSE).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Fonts:** the plugin embeds [Inter](https://github.com/rsms/inter) and
-> [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), both under the SIL Open Font
-> License 1.1. Their licences are in [`assets/fonts/`](assets/fonts/).
+> **Fonts:** the plugin embeds [Inter](https://github.com/rsms/inter),
+> [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) and
+> [Sora](https://github.com/sora-xor/sora-font), all under the SIL Open Font License 1.1. Their
+> licences are in [`assets/fonts/`](assets/fonts/).
 
 > **Note:** JUCE itself (vendored as a submodule at `libs/JUCE`) is **not** covered by this
 > licence — it's dual-licensed under AGPLv3 or Avid's commercial JUCE licence. See
