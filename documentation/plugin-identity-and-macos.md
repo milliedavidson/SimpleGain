@@ -1,7 +1,7 @@
 # Plugin identity & macOS
 
-Company name, bundle ID and manufacturer codes; `auval`; Pro Tools/AAX; and the TCC privacy
-crash that killed the standalone app on first launch.
+Company name, bundle ID and manufacturer codes; `auval`; Pro Tools/AAX; the TCC privacy
+crash that killed the standalone app on first launch; and packaging it to send to someone.
 
 **Simply Gain docs** · [Index](README.md)  
 **The plugin:** [Plan](plan.md) · [Hosting & threads](plugin-hosting-and-threads.md) · [Parameters & automation](parameters-and-automation.md) · [Smoothing & the audio loop](smoothing-and-the-audio-loop.md) · [State: save and restore](state-save-and-restore.md) · **Identity & macOS** · [The editor (GUI)](editor-gui.md)  
@@ -22,6 +22,11 @@ crash that killed the standalone app on first launch.
 - **Pro Tools/AAX needs an Avid NDA and signed builds**, so it's out of scope here.
 - The standalone app crashing on first launch was **macOS TCC privacy**, not a bug in the
   plugin — it needs usage-description keys in `Info.plist`.
+- **macOS caches plugin names.** After a rename, Logic can show the old name until the cache is
+  cleared.
+- **Sending it to someone needs three things**: a universal binary, an old enough minimum macOS,
+  and a way past Gatekeeper. `scripts/package-mac.sh` does the first two and signs ad hoc; a
+  warning-free installer needs an Apple Developer ID.
 
 ---
 
@@ -55,18 +60,35 @@ crash that killed the standalone app on first launch.
 > Changing the bundle ID makes macOS treat it as a brand-new app, so the microphone permission
 > is requested again on first launch. That's expected, not a regression.
 
-> ✅ **Renamed 2026-11-16.** `PRODUCT_NAME` is now **Simply Gain**, the name in the brand plan.
-> It's the name hosts list, and the bundles are called `Simply Gain.component`,
-> `Simply Gain.vst3` and `Simply Gain.app`. The window shows it in capitals.
+> ✅ **Renamed 2026-11-16.** `PRODUCT_NAME` is now **simply gain**: the name in the brand plan,
+> in lower case to match the logo-style title in the window. It's the name hosts list, and the
+> bundles are called `simply gain.component`, `simply gain.vst3` and `simply gain.app`. The
+> lockup at the bottom of the window still shows it in capitals.
 >
 > The CMake target, the class names and the bundle ID keep `SimpleGain`. Nobody sees them, and
 > the bundle ID is one of the permanent things. Hosts recognise the plugin by its codes (`Sgai`,
 > `Mxdp`), not its name, so a saved project still finds it.
 >
-> Two side effects. The Standalone keeps its settings in a file named after the product, so it
-> starts afresh at 0 dB and the old `SimpleGain.settings` can go. And the old `SimpleGain.component`
-> and `SimpleGain.vst3` bundles in `~/Library/Audio/Plug-Ins/` have to be removed, or the host
-> sees two plugins with the same codes.
+> Side effects:
+>
+> - The Standalone keeps its settings in a file named after the product, so it started afresh at
+>   0 dB, and the old `SimpleGain.settings` can go.
+> - Old bundles in `~/Library/Audio/Plug-Ins/` have to be removed, or the host sees two plugins
+>   with the same codes.
+> - macOS's file names ignore case, so `Simply Gain.component` and `simply gain.component` are the
+>   *same* folder. Copying over it keeps the old capitals, so the old bundle was removed first.
+
+**When a host still shows the old name.** macOS keeps a cache of every Audio Unit's name, and Logic
+reads its list from it. After a rename, quit Logic, then run:
+
+```bash
+killall -9 AudioComponentRegistrar
+rm ~/Library/Caches/AudioUnitCache/com.apple.audiounits.cache
+```
+
+The first stops the background process that keeps the cache; the second deletes the cache, which
+macOS rebuilds. In Logic, *Settings → Plug-in Manager → Reset & Rescan Selection* does the same
+for one plugin.
 
 > ⚠️ **Change these before you ever share a build.** Once someone has your plugin installed, the
 > codes are its identity — changing them later makes the DAW treat it as a completely different
@@ -176,7 +198,7 @@ juce_add_plugin(SimpleGain
 Verify it worked:
 
 ```bash
-plutil -p "build/SimpleGain_artefacts/Debug/Standalone/Simply Gain.app/Contents/Info.plist" | grep NS
+plutil -p "build/SimpleGain_artefacts/Debug/Standalone/simply gain.app/Contents/Info.plist" | grep NS
 ```
 
 **Only the Standalone needs this.** Inside a DAW, the *host* owns the microphone and has
@@ -201,5 +223,76 @@ normally does that), so to run one as an app JUCE provides a small host around i
 - saving your device choice between launches
 
 Everything in that screenshot — device dropdowns, sample rate, buffer size, Bluetooth MIDI
-button — is stock JUCE UI. Our own editor is the separate window that says "SIMPLY GAIN".
+button — is stock JUCE UI. Our own editor is the separate window that says "simply gain".
 
+---
+
+## 6. Sending it to someone: universal builds, signing and Gatekeeper
+
+The everyday build works on the Mac that built it. Three things stop it working on someone else's:
+
+| Problem         | Why                                                                                         | Fix                                                                      |
+|-----------------|---------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| The wrong chip  | A build matches the machine's own chip. This Mac is Intel, so its builds are Intel-only     | `CMAKE_OSX_ARCHITECTURES "arm64;x86_64"`: a universal binary             |
+| Too new a macOS | Left unset, the minimum macOS is the SDK's own version (15.5 here)                          | `CMAKE_OSX_DEPLOYMENT_TARGET 11.0`, in `CMakeLists.txt`                  |
+| Gatekeeper      | A download is marked as quarantined, and macOS blocks quarantined code Apple hasn't checked | For now: sign ad hoc, and remove the mark by hand. Later: a Developer ID |
+
+- **A universal binary** is two programs in one file, one per chip, and macOS picks the right one.
+  `lipo -archs <binary>` lists what's inside. It takes twice as long to build, so only the package
+  is built that way.
+- **macOS 11** was the first version on Apple Silicon, so it's a natural floor. `otool -l <binary>`
+  shows it as `minos`. This one *is* in `CMakeLists.txt`, for every build: a Debug build that
+  needs the latest macOS would only be found out later.
+- **Gatekeeper.** Mail and browsers add an attribute, `com.apple.quarantine`, to everything they
+  download. macOS then refuses quarantined code unless it's signed with an Apple **Developer ID**
+  *and* notarised. The install note has a one-line `xattr` command that removes the attribute.
+
+**C# comparison.** This is Windows' Mark of the Web and SmartScreen. The quarantine attribute is
+the Mark of the Web, Gatekeeper is SmartScreen, and a Developer ID is an Authenticode certificate.
+
+### Ad hoc signing
+
+`codesign --sign -` signs with *no* identity: the `-`. The signature proves the bundle hasn't
+changed since it was signed, but says nothing about who made it. Apple Silicon Macs refuse to run
+code with no signature at all, so even this much matters. Intel builds come out of the linker
+unsigned, which is why the plugins installed on this Mac show "not signed at all".
+
+### Making the package
+
+```bash
+scripts/package-mac.sh
+```
+
+It writes `dist/simply-gain-0.1.0-mac.zip` (the version comes from `project()`). Inside:
+
+| File                    | What it is                                     |
+|-------------------------|------------------------------------------------|
+| `simply gain.component` | The Audio Unit, for Logic and GarageBand       |
+| `simply gain.vst3`      | The VST3, for most other DAWs                  |
+| `How to install.txt`    | Where to put them, and the `xattr` command     |
+| `Licences/`             | The plugin's, the fonts', JUCE's and the SDKs' |
+
+- **It builds in `build-release/`**, so the everyday Debug build is left alone.
+- **It doesn't install anything.** `-DSIMPLEGAIN_INSTALL_AFTER_BUILD=OFF` turns off
+  `COPY_PLUGIN_AFTER_BUILD`, so the Release build doesn't overwrite the plugins on this Mac.
+- **It checks itself**: it stops if the result isn't universal, and prints the minimum macOS.
+- **`ditto`, not `zip`.** `ditto` is the zip tool the Finder uses. It keeps a bundle's symbolic
+  links and permissions, which a plain `zip` can break.
+- **The licences travel with it.** The Open Font License asks for its text to go wherever the
+  fonts go, and they're compiled into the plugin. JUCE is used under the AGPLv3, which asks that
+  anyone given the plugin can get its source, so the note links to this repository.
+
+### Later: a warning-free installer
+
+For a plugin that installs with no warnings and no Terminal, macOS needs it signed by a known
+developer and checked by Apple. That needs the paid **Apple Developer Program** (about £79 or $99 a
+year), joined in your own name. Then:
+
+1. Sign each bundle with a *Developer ID Application* certificate, with the hardened runtime and
+   a timestamp: `codesign --sign "Developer ID Application: …" --options runtime --timestamp`.
+2. Build an installer that puts them in `/Library/Audio/Plug-Ins/` (`pkgbuild` and
+   `productbuild`), signed with a *Developer ID Installer* certificate.
+3. Send it to Apple: `xcrun notarytool submit … --wait`. Apple scans it and records the result.
+4. Attach Apple's result to the file: `xcrun stapler staple …`, so it can be checked offline.
+
+The tools are already on this Mac, with the command-line tools. Only the certificates are missing.
