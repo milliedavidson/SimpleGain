@@ -424,18 +424,20 @@ editor holds a reference to the processor rather than owning it, and the message
 [The editor (GUI)](editor-gui.md). Where the build differs from the plan above:
 
 - **Written test-first**, with 16 tests that need no screen (8 passed and 10 failed against the old
-  generic editor, then all green). More tests came with the brand look below, so there are now 24.
+  generic editor, then all green). More tests came with the brand look and the fine number drag below,
+  so there are now 27.
 - **The window follows the Maxximum Displacement brand plan.** It has a flat near-black panel, a
   slim apricot ring with the value in the middle, and an amber warm-up past 85% of the range. It
   uses the brand fonts and the lockup `SIMPLY GAIN // maxximum displacement`. It opens at 480×320, the family's
   smallest size (see [The editor §13](editor-gui.md#13-drawing-the-knob-the-brand-look)). An
-  earlier purple restyle, matching the README banner, was replaced by it.
+  earlier purple restyle was replaced by it, and the README banner now matches.
 - **Renamed to Simply Gain** (`PRODUCT_NAME`), the name in the brand plan. The codes, the bundle
   ID and the internal `SimpleGain` names are unchanged (see
   [Identity & macOS §1](plugin-identity-and-macos.md#1-company_name-bundle_id-and-plugin_manufacturer_code--what-will-customers-see)).
 - **The knob turns like a real one.** First testing showed the up/down drag style felt broken, so a
   small `juce::Slider` subclass now follows the pointer round the arc, and a click never moves it
   (see [The editor §10](editor-gui.md#10-turning-the-knob-following-the-pointer-without-jumping)).
+  The number in the middle is a fine slider on top: drag it up or down, 0.05 dB a pixel.
 - **The editor keeps no reference to the processor.** The base class already holds one, so a second
   copy would be redundant. The processor is passed in by reference and only used to build the attachment.
 - **A snapshot mode** was added: `SimpleGain_Tests --snapshots <folder>` renders the editor to PNG
@@ -443,8 +445,8 @@ editor holds a reference to the processor rather than owning it, and the message
 - **A custom `LookAndFeel`** carries the embedded brand fonts and makes the value text scale with
   the window (see [The editor §9](editor-gui.md#9-a-look-and-feel-the-brand-fonts-and-the-value-text)).
   The test app now also fails if JUCE raises any debug assertion.
-- **Still needs a human.** In the Standalone: turn the knob, drag and click the number in the
-  middle, type a value, double-click the ring to reset, and drag the corner to resize. In a DAW:
+- **Still needs a human.** In the Standalone: turn the knob, drag the number in the middle up and
+  down, click it and type a value, double-click the ring to reset, and drag the corner to resize. In a DAW:
   check that automation moves the knob.
 
 ---

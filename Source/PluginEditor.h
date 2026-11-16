@@ -62,8 +62,8 @@ private:
     A knob you turn by dragging round it, like a real one, but RELATIVELY: a click
     on its own never changes the value, and the value moves by the angle you turn.
     (JUCE's own Rotary style jumps to wherever you click — +30 dB at one end.)
-    A plain click on the number in the middle opens it for typing.
-    -> documentation/editor-gui.md section 10
+    The number in the middle is a fine slider: drag it up or down. A plain click
+    on it opens it for typing. -> documentation/editor-gui.md section 10
 */
 class RelativeRotarySlider final : public juce::Slider
 {
@@ -73,17 +73,26 @@ public:
     void mouseDown (const juce::MouseEvent&) override;
     void mouseDrag (const juce::MouseEvent&) override;
     void mouseUp (const juce::MouseEvent&) override;
+    void mouseMove (const juce::MouseEvent&) override;
+
+    /** How far the number moves the gain for each pixel dragged up or down. */
+    static constexpr double numberDbPerPixel = 0.05;
 
     /** What a plain click on the number does: opens it for typing, unless a test swaps it out. */
     std::function<void()> onNumberClicked;
 
 private:
+    [[nodiscard]] bool isOnTheNumber (juce::Point<float> position);
+
     /** The same event, turned round the knob's centre so the grab lines up with the value. */
     juce::MouseEvent turnedToTheDot (const juce::MouseEvent&);
 
     // Like C#'s double?: empty until a grab has a pointer angle to start from.
     std::optional<double> lastPointerAngle;
     double dotAngleUnlimited = 0.0;     // where the value would be with no end stops
+
+    struct NumberDrag { double startValue; float startY; };
+    std::optional<NumberDrag> numberDrag;     // only while a drag that began on the number goes on
 };
 
 

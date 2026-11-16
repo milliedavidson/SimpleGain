@@ -30,7 +30,7 @@ parameter in both directions, why member order matters, and how a GUI gets teste
   keeping its 3:2 shape.
 - **The knob follows the pointer round its arc, but a click never moves it.** JUCE's styles do
   one or the other, so a small subclass of `juce::Slider` adapts JUCE's circular style. The number
-  in the middle is part of the knob: drag it to turn, click it to type.
+  in the middle is a fine slider: drag it up or down, 0.05 dB a pixel, or click it to type.
 - **A `LookAndFeel` is JUCE's theme.** Ours carries the two brand fonts, draws the knob and puts
   the value inside the ring. It has to be set *after* the children are added, and detached again in
   the destructor.
@@ -38,7 +38,7 @@ parameter in both directions, why member order matters, and how a GUI gets teste
   ring, one accent colour (apricot) and a big value in the middle. Past 85% of the range the arc
   turns Volcanic Amber, the brand's colour for "approaching the limit".
 - **It's tested without a screen.** JUCE can build a component, lay it out and paint it into an
-  image in memory. 24 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
+  image in memory. 27 tests cover it, and a `--snapshots` mode writes the PNGs on this page.
 - **Nothing permanent changed.** The parameter id, range and saved format are untouched; the
   editor only *reads and writes* the parameter.
 
@@ -472,14 +472,38 @@ The value sits inside the ring, so it covers the part of the knob people grab mo
 the value box would catch those clicks and the knob would never see them. So the look-and-feel
 builds the box with `setInterceptsMouseClicks (false, true)`:
 
-- **`false`**: the box itself ignores clicks, so they fall through to the knob underneath. Dragging
-  the number turns the knob like anywhere else.
+- **`false`**: the box itself ignores clicks, so they fall through to the knob underneath.
 - **`true`**: its children still take clicks. While you're typing, the box holds a `TextEditor`,
   and that needs the mouse.
 
 The box no longer opens for typing by itself, so the knob does it. `mouseUp` checks for a plain
 click on the number, one with no drag, and calls `onNumberClicked`. That's a `std::function`, which
 by default calls JUCE's `showTextBox()`.
+
+**Dragging the number is a fine slider.** A grab that starts on the number doesn't turn the ring.
+Instead, up is louder and down is quieter, at a fixed 0.05 dB a pixel. Sideways movement is ignored,
+so it can't fight the ring. `mouseDown` notes where the drag began, and `mouseDrag` sets the value
+from there:
+
+```cpp
+setValue (numberDrag->startValue + (numberDrag->startY - e.position.y) * numberDbPerPixel, juce::sendNotificationSync);
+```
+
+- **Why a fixed amount per pixel?** The ring's feel depends on its size: at the opening size,
+  about 0.2 dB a pixel, and half that at 200%. The number is four times finer at the opening size,
+  and the same at every size.
+- **Why from where the drag began?** Measuring from the start, not from the last event, means
+  rounding to 0.1 dB steps never builds up. It also gives the same end stop as the ring: drag past
+  +30 dB and the value waits there until you come back.
+- **The host still sees one gesture.** `mouseDown` still calls JUCE's own `mouseDown`, which starts
+  the gesture, and `mouseUp` ends it. Only the drags in between skip JUCE.
+
+Over the number the pointer shows up-and-down arrows (`UpDownResizeCursor`), set in `mouseMove`.
+Scrolling needed no code: the number lets mouse events through, so JUCE's own scroll-wheel
+handling already works there. On a trackpad, 40 pixels of scrolling is about 1 dB.
+
+**C# comparison.** `numberDrag` is a `std::optional` of a small struct, like a nullable struct in C#.
+It's only filled while a drag that began on the number is going on.
 
 **C# comparison.** `std::function<void()>` is an `Action` delegate. It's public so a test can swap
 in a counter: opening the box grabs the keyboard, which needs a real window on screen. JUCE's
@@ -540,21 +564,24 @@ goes, because a component doesn't need a window to exist. The 18 tests in
 | Name and fonts                                 | SIMPLY GAIN in JetBrains Mono, the value in Inter, the lockup bottom left           |
 | Opening and closing                            | 50 open/close cycles, and the parameter moving while *no* editor exists             |
 
-The 6 tests in `tests/KnobDragTests.cpp` (group **Knob dragging**) send the knob the same mouse
+The 9 tests in `tests/KnobDragTests.cpp` (group **Knob dragging**) send the knob the same mouse
 events JUCE would, from a fake mouse:
 
-| Test                           | What it proves                                                                                    |
-|--------------------------------|---------------------------------------------------------------------------------------------------|
-| Clicking never jumps           | A click at either end, the top, the gap or the centre leaves the gain alone                       |
-| Follows the pointer            | Dragging the dot round the arc lands on +15 dB, then back on −30 dB                               |
-| Grab anywhere                  | Grabbing away from the dot and turning moves the gain by the angle turned                         |
-| Stops at the ends              | Turning ¾ of a circle past either end holds there, then turning back returns to the start         |
-| One gesture per drag           | The host sees exactly one gesture begin and one end, so automation records one move               |
-| The number is part of the knob | JUCE's own hit test sends a click on the number to the knob; dragging it turns, clicking it types |
+| Test                           | What it proves                                                                                      |
+|--------------------------------|-----------------------------------------------------------------------------------------------------|
+| Clicking never jumps           | A click at either end, the top, the gap or the centre leaves the gain alone                         |
+| Follows the pointer            | Dragging the dot round the arc lands on +15 dB, then back on −30 dB                                 |
+| Grab anywhere                  | Grabbing away from the dot (but not on the number) and turning moves the gain by the angle turned   |
+| Stops at the ends              | Turning ¾ of a circle past either end holds there, then turning back returns to the start           |
+| One gesture per drag           | The host sees exactly one gesture begin and one end, so automation records one move                 |
+| The number is part of the knob | JUCE's own hit test sends a click on the number to the knob; a plain click opens it for typing      |
+| Drag the number up and down    | 100 pixels up is +5 dB, down is quieter, sideways does nothing, one gesture, and it stops at +30 dB |
+| Scroll on the number           | Scrolling over the number nudges the gain up and back down in small steps                           |
+| The cursor shows up and down   | Up-and-down arrows over the number, the normal pointer over the ring                                |
 
 The tests were **written first**. Against the old generic editor, 8 tests passed and 10 failed; then the editor made them
 pass. The brand look was done the same way: its tests failed against the earlier purple knob, then
-passed. The editor and knob have since been deliberately broken in forty-one ways to prove the tests notice
+passed. The editor and knob have since been deliberately broken in forty-eight ways to prove the tests notice
 (see [Testing](testing.md#how-i-know-they-can-fail)). Some were only caught after I fixed the
 tests: an invisible knob slipped past the first "it draws" test, and forgetting to detach the
 look-and-feel was invisible until the test app began counting JUCE's assertions.
@@ -573,8 +600,8 @@ stretch of the arc has turned amber:
 
 ![The same window with the gain at −30, −12.3 and +24 dB](images/editor-values.png)
 
-Still by hand: open the Standalone, turn the knob, drag and click the number, type a value,
-double-click the ring to reset, drag the corner, and in a DAW check that automation moves the
+Still by hand: open the Standalone, turn the knob, drag the number up and down, click it and type a
+value, double-click the ring to reset, and drag the corner. In a DAW, check that automation moves the
 knob. Those need ears and a mouse.
 
 ---

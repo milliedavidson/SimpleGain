@@ -172,11 +172,24 @@ RelativeRotarySlider::RelativeRotarySlider()
 void RelativeRotarySlider::mouseDown (const juce::MouseEvent& e)
 {
     lastPointerAngle.reset();                   // a new grab: measure afresh
-    Slider::mouseDown (turnedToTheDot (e));
+    numberDrag.reset();
+
+    if (isOnTheNumber (e.position) && ! e.mods.isPopupMenu())
+        numberDrag = NumberDrag { getValue(), e.position.y };
+
+    Slider::mouseDown (turnedToTheDot (e));     // starts the host's gesture either way
 }
 
 void RelativeRotarySlider::mouseDrag (const juce::MouseEvent& e)
 {
+    if (numberDrag.has_value())
+    {
+        // A fine slider: up is louder, sideways is ignored, and a pixel is the same at any window size.
+        // From where the drag began, so past an end it waits there. -> documentation/editor-gui.md section 10
+        setValue (numberDrag->startValue + (numberDrag->startY - e.position.y) * numberDbPerPixel, juce::sendNotificationSync);
+        return;
+    }
+
     Slider::mouseDrag (turnedToTheDot (e));
 }
 
@@ -186,9 +199,21 @@ void RelativeRotarySlider::mouseUp (const juce::MouseEvent& e)
 
     // The number lets clicks through to the knob, so a plain click on it opens it for typing here.
     // -> documentation/editor-gui.md section 10
-    if (! e.mouseWasDraggedSinceMouseDown() && getLookAndFeel().getSliderLayout (*this).textBoxBounds.contains (e.getPosition())
-         && onNumberClicked != nullptr)
+    if (! e.mouseWasDraggedSinceMouseDown() && isOnTheNumber (e.position) && onNumberClicked != nullptr)
         onNumberClicked();
+
+    numberDrag.reset();
+}
+
+void RelativeRotarySlider::mouseMove (const juce::MouseEvent& e)
+{
+    Slider::mouseMove (e);
+    setMouseCursor (isOnTheNumber (e.position) ? juce::MouseCursor::UpDownResizeCursor : juce::MouseCursor::NormalCursor);
+}
+
+bool RelativeRotarySlider::isOnTheNumber (const juce::Point<float> position)
+{
+    return getLookAndFeel().getSliderLayout (*this).textBoxBounds.toFloat().contains (position);
 }
 
 juce::MouseEvent RelativeRotarySlider::turnedToTheDot (const juce::MouseEvent& e)
