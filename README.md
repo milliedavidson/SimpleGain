@@ -1,84 +1,167 @@
 <img src="documentation/images/banner.svg" alt="Simply Gain — a gain plugin, built from scratch while learning C++">
 
-<a href="#an-overview">An overview</a> | <a href="#key-features">Key features</a> | <a href="#tech-stack">Tech stack</a> | <a href="#get-started">Get started</a> | <a href="#documentation">Documentation</a> | <a href="#status">Status</a> | <a href="#built-with-claude-ai">Built with Claude AI</a> | <a href="#contributing">Contributing</a> | <a href="#license">License</a>
+<p align="center">
+  <a href="#quick-start">Quick start</a> &nbsp;·&nbsp;
+  <a href="#an-overview">Overview</a> &nbsp;·&nbsp;
+  <a href="#key-features">Features</a> &nbsp;·&nbsp;
+  <a href="#build-from-source">Build from source</a> &nbsp;·&nbsp;
+  <a href="#documentation">Documentation</a> &nbsp;·&nbsp;
+  <a href="#status">Status</a> &nbsp;·&nbsp;
+  <a href="#contributing">Contributing</a> &nbsp;·&nbsp;
+  <a href="#licence">Licence</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/milliedavidson/simply-gain/releases/latest"><img alt="Download for macOS" src="https://img.shields.io/badge/DOWNLOAD-for%20macOS-F2A766?style=for-the-badge&labelColor=F2A766&logo=apple&logoColor=121417"></a>
+</p>
+
+<p align="center">
+  <img alt="Formats: AU, VST3" src="https://img.shields.io/badge/formats-AU%20%C2%B7%20VST3-2A2E34?style=flat-square&labelColor=1B1E22">
+  <img alt="macOS 11 or later, Intel and Apple Silicon" src="https://img.shields.io/badge/macOS-11%2B%20%C2%B7%20Intel%20%26%20Apple%20Silicon-2A2E34?style=flat-square&labelColor=1B1E22&logo=apple&logoColor=E8EAED">
+  <img alt="AU validated with auval" src="https://img.shields.io/badge/AU-auval%20passed-2A2E34?style=flat-square&labelColor=1B1E22">
+  <img alt="Built with JUCE 8, C++17, CMake" src="https://img.shields.io/badge/JUCE%208%20%C2%B7%20C%2B%2B17%20%C2%B7%20CMake-2A2E34?style=flat-square&labelColor=1B1E22">
+  <img alt="Free" src="https://img.shields.io/badge/price-free-2A2E34?style=flat-square&labelColor=1B1E22">
+</p>
+
+---
+
+## Quick start
+
+**Simply Gain is a free volume knob for your DAW.** Put it on a track, a bus or your whole mix and
+turn the ring. That's the whole plugin.
+
+It runs on **macOS 11 or later**, on both Intel and Apple Silicon Macs, as an **Audio Unit**
+(Logic Pro, GarageBand) and a **VST3** (Ableton Live, Reaper and most other DAWs). There's no
+Windows or Linux build yet.
+
+### 1. Download
+
+Grab the latest **`simply-gain-<version>-mac.zip`** from the
+[**Releases page**](https://github.com/milliedavidson/simply-gain/releases/latest) (look under
+**Assets**) and unzip it. Inside you'll find the two plugins, a short installation note and the
+licences.
+
+### 2. Copy it where your DAW looks
+
+In Finder choose **Go → Go to Folder…** (`⇧⌘G`), paste the folder for your DAW and press Return,
+then drag the plugin in.
+
+| Your DAW                             | Plugin to copy          | Folder to paste                       |
+|--------------------------------------|-------------------------|---------------------------------------|
+| **Logic Pro**, **GarageBand**        | `simply gain.component` | `~/Library/Audio/Plug-Ins/Components` |
+| **Ableton Live**, **Reaper**, others | `simply gain.vst3`      | `~/Library/Audio/Plug-Ins/VST3`       |
+
+### 3. Tell macOS it's safe
+
+macOS blocks plugins downloaded from the internet unless Apple has checked them and Simply Gain
+hasn't been through that yet (it needs a paid Apple Developer ID, which is on the
+[to-do list](#status)). Open **Terminal** (Applications → Utilities), paste the line for the plugin
+you copied, and press Return. Nothing is printed when it works.
+
+```bash
+# Audio Unit
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"simply gain.component"
+
+# VST3
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"simply gain.vst3"
+```
+
+> The command only removes the "downloaded from the internet" flag from that one plugin. If you'd
+> rather not trust a download, [build it yourself](#build-from-source): the whole source is here.
+
+### 4. Open your DAW
+
+- **Logic Pro** checks new plugins as it starts. Find it in any channel strip's **Audio FX** slot
+  under **Audio Units → Maxximum Displacement → simply gain**.
+- **Other DAWs**: rescan your plugins if it doesn't appear straight away. It's listed under
+  **Maxximum Displacement**.
+
+<details>
+<summary><b>It didn't show up, or Logic says it failed</b></summary>
+
+<br>
+
+- Check step 3 was done for the plugin your DAW is using.
+- In Logic, open **Logic Pro → Settings → Plug-in Manager**, select **simply gain** and click
+  **Reset & Rescan Selection**.
+- Still stuck? [Open an issue](https://github.com/milliedavidson/simply-gain/issues) and tell me
+  your DAW and macOS version.
+
+</details>
+
+### Using it
+
+- **Turn the ring** clockwise for louder, anticlockwise for quieter.
+- **Drag the number** for fine changes, or **click it** and type an exact value like `-3` or `2.5`.
+- **Double-click the ring** to go back to 0 dB. **0 dB means no change.**
+- The range is **-60 to +30 dB**. The arc warms from apricot to amber as you push hard.
+
+There's a fuller guide, from "like you're five" to "for the nerds", behind the **?** button in the
+plugin, and in [`guide/quick-start.md`](guide/quick-start.md).
+
+<div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>
+
+---
 
 ## An overview
 
-**Simply Gain** is a volume/gain plugin for Logic, GarageBand, Reaper, Ableton and friends,
-built from absolute scratch using [JUCE](https://juce.com/) and CMake.
+Simply Gain is also a **test / learning project**, not a polished product. I'm a C# developer
+teaching myself C++ and audio DSP, one plugin at a time. Gain is deliberately the simplest
+possible starting point: the actual signal processing is one multiply. All the real learning is in
+the *architecture*. That means how a plugin talks to a host, how the audio thread's rules differ
+from everything else you've written, and what C++ is doing that C# quietly does for you.
 
-This is a **test / learning project**, not a polished product. I'm a C# developer teaching
-myself C++ and audio DSP, one plugin at a time. Gain is deliberately the simplest possible
-starting point: the actual signal processing is one multiply. All the real learning is in the
-*architecture*. That means how a plugin talks to a host, how the audio thread's rules differ from
-everything else you've written, and what C++ is doing that C# quietly does for you.
+Because of that, **the code is closer to a tutorial than production source**. Every C++ construct
+gets a "what this is / why it's here" note, often with a C# comparison, and the full reasoning
+lives in [`documentation/`](documentation/README.md). If you're coming from a managed language and
+finding your footing in C++ or audio programming, I hope this is useful. There aren't nearly
+enough audio programming resources out there, so maybe this fills a tiny gap.
 
-Because of that, **the code is littered with comments** and is closer to a tutorial than production
-source. Every C++ construct gets a "what this is / why it's here" note, often with
-a C# comparison. If you're coming from a managed language and finding your footing in C++ or
-audio programming, I hope this is useful. There aren't nearly enough audio
-programming resources out there, and maybe this fills a tiny gap.
+**Fork it, strip it down, build on top of it, learn from it.** The licence terms are in
+[Licence](#licence). And if you spot something wrong or have a better way to do it, I'd love to
+hear it: see [Contributing](#contributing).
 
-**Use it for whatever you like.** Fork it, strip it down, build on top of it, use it to learn - whatever. And if you spot something wrong or have a better
-way to do it, I'd love to hear it: see [Contributing](#contributing).
-
-<div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
+<div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>
 
 ---
 
 ## Key features
 
-🎚️ Builds as **Standalone**, **Audio Unit (AU)**, and **VST3** from one CMake project
+- **One CMake project, three formats**: Standalone, Audio Unit (AU) and VST3.
+- **A [quick-start guide](guide/quick-start.md) built into the plugin**, behind the **?** button.
+- **AU validated end to end** with Apple's own `auval`, so Logic and GarageBand will load it.
+- **Commented for people learning C++**: short notes in the code, with the full reasoning in
+  [`documentation/`](documentation/README.md) rather than crowding the source.
+- **Explains *why*, not just what**: real-time constraints, thread safety, dB vs linear gain.
+- **IDE-agnostic**: CLion, VS Code, Xcode and Visual Studio all work from the same
+  `CMakeLists.txt`.
 
-🎚️ A [quick-start guide](guide/quick-start.md) built into the plugin, behind the ? button
-
-🎚️ AU validated end-to-end with Apple's own `auval` — Logic and GarageBand will load it
-
-🎚️ Commented for people learning C++ — short notes in the code, with the full reasoning in
-[`documentation/`](documentation/README.md) rather than crowding the source
-
-🎚️ Documentation explains *why* audio programming forces these choices, not just what the code
-does — real-time constraints, thread safety, dB vs linear gain
-
-🎚️ Built entirely with CMake, so it's IDE-agnostic — CLion, VS Code, Xcode, Visual Studio all
-work from the same `CMakeLists.txt`
-
-<div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
+<div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>
 
 ---
 
-## Tech stack
+## Build from source
 
-![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)
-![CMake](https://img.shields.io/badge/CMake-3.22%2B-064F8C?logo=cmake&logoColor=white)
-![JUCE](https://img.shields.io/badge/JUCE-8-8CC63F)
-![Formats](https://img.shields.io/badge/formats-AU%20%7C%20VST3%20%7C%20Standalone-6f42c1)
-![AU validated](https://img.shields.io/badge/AU-auval%20passed-success)
-![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple&logoColor=white)
-![CLion](https://img.shields.io/badge/built%20in-CLion-000000?logo=clion&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-yellow)
+Want to read it, change it, or don't trust a download? Everything below is for you.
 
-<div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
+![C++17](https://img.shields.io/badge/C%2B%2B-17-2A2E34?style=flat-square&labelColor=1B1E22&logo=cplusplus&logoColor=E8EAED)
+![CMake](https://img.shields.io/badge/CMake-3.22%2B-2A2E34?style=flat-square&labelColor=1B1E22&logo=cmake&logoColor=E8EAED)
+![JUCE](https://img.shields.io/badge/JUCE-8-2A2E34?style=flat-square&labelColor=1B1E22)
+![CLion](https://img.shields.io/badge/built%20in-CLion-2A2E34?style=flat-square&labelColor=1B1E22&logo=clion&logoColor=E8EAED)
 
----
-
-## Get started
-
-**1. Clone the repository — including the JUCE submodule**
+### 1. Clone the repository, including the JUCE submodule
 
 JUCE is vendored as a git submodule rather than committed directly, so `--recurse-submodules`
-is essential — skip it and `libs/JUCE` will be empty, which produces a confusing CMake error
+is essential. Skip it and `libs/JUCE` will be empty, which produces a confusing CMake error
 rather than an obvious one.
 
 ```bash
 git clone --recurse-submodules https://github.com/milliedavidson/simply-gain.git
 ```
 
----
+### 2. Build
 
-**2. Build**
-
-Either open the folder in **CLion** (it detects the CMake project automatically — pick the
+Either open the folder in **CLion** (it detects the CMake project automatically: pick the
 `SimpleGain_Standalone` target and hit Run), or from the terminal:
 
 ```bash
@@ -86,40 +169,33 @@ cmake -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --target SimpleGain_Standalone -j 8
 ```
 
-First configure builds JUCE's `juceaide` helper tool and takes ~90 seconds. After that, builds
-are incremental.
+The first configure builds JUCE's `juceaide` helper tool and takes about 90 seconds. After that,
+builds are incremental.
 
----
-
-**3. Run it**
+### 3. Run it
 
 ```bash
 open "build/SimpleGain_artefacts/Debug/Standalone/simply gain.app"
 ```
 
-The Standalone build is the fast development loop — a real `.app` you can run without a DAW,
-with its own Audio/MIDI settings (**Options → Audio/MIDI Settings**) for picking an input and
-output device.
+The Standalone build is the fast development loop: a real `.app` you can run without a DAW, with
+its own Audio/MIDI settings (**Options → Audio/MIDI Settings**) for picking an input and output
+device.
 
----
-
-**4. Build the plugin formats and validate**
+### 4. Build the plugin formats and validate
 
 ```bash
 cmake --build build --target SimpleGain_AU SimpleGain_VST3 -j 8
 ```
 
-`COPY_PLUGIN_AFTER_BUILD` installs both automatically to
-`~/Library/Audio/Plug-Ins/Components` and `~/Library/Audio/Plug-Ins/VST3`. To check the AU the
-same way Logic will before it loads it:
+`COPY_PLUGIN_AFTER_BUILD` installs both automatically to `~/Library/Audio/Plug-Ins/Components` and
+`~/Library/Audio/Plug-Ins/VST3`. To check the AU the same way Logic will before it loads it:
 
 ```bash
 auval -v aufx Sgai Mxdp
 ```
 
----
-
-**5. Run the tests**
+### 5. Run the tests
 
 ```bash
 cmake --build build --target check
@@ -129,26 +205,25 @@ This builds a test app that drives the real processor with no DAW and no sound c
 it. The first build compiles JUCE a second time, so it takes a few minutes; the plugin build
 doesn't touch it.
 
----
-
-**6. Package it to send to someone**
+### 6. Package it to send to someone
 
 ```bash
 scripts/package-mac.sh
 ```
 
-This makes `dist/simply-gain-0.1.0-mac.zip`: a Release build for Intel and Apple Silicon Macs,
-macOS 11 and later, with an install note. It isn't signed with an Apple Developer ID yet, so the
-note includes one Terminal command to get it past macOS's download check. See
+This makes `dist/simply-gain-<version>-mac.zip`: a Release build for Intel and Apple Silicon Macs,
+macOS 11 and later, with an install note. That's the file attached to each
+[release](https://github.com/milliedavidson/simply-gain/releases). It isn't signed with an Apple
+Developer ID yet, which is why the install note includes one Terminal command. See
 [Identity & macOS §6](documentation/plugin-identity-and-macos.md#6-sending-it-to-someone-universal-builds-signing-and-gatekeeper).
 
-<div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
+<div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>
 
 ---
 
 ## Documentation
 
-The code stays light on comments; the reasoning lives in
+The code stays light (-ish) on comments; the reasoning lives in
 **[`documentation/`](documentation/README.md)**. Each doc opens with an "In short" summary, then
 goes deep.
 
@@ -173,89 +248,70 @@ goes deep.
 
 If you have any suggestions or feedback, see [Contributing](#contributing).
 
-<div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
+<div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>
 
 ---
 
 ## Status
 
-Built one verified phase at a time — nothing below is marked done unless it's actually been
-built and run.
+Built one verified phase at a time. Nothing below is marked done unless it's actually been built
+and run.
 
-- [x] Project scaffold — CMake, JUCE 8 as a submodule, no Projucer
-- [x] `AudioProcessor` skeleton — pass-through audio, proves the toolchain end-to-end
+- [x] Project scaffold: CMake, JUCE 8 as a submodule, no Projucer
+- [x] `AudioProcessor` skeleton: pass-through audio, proves the toolchain end to end
 - [x] Standalone, AU and VST3 all building
 - [x] AU validated with `auval`
 - [x] macOS microphone/Bluetooth privacy permissions (TCC) handled correctly
 - [x] An actual gain parameter (`AudioProcessorValueTreeState`), host-automatable, −60 to +30 dB
-- [x] Sample-accurate gain smoothing (no zipper noise) — biggest per-sample gain step down 960× in testing
-- [x] State save/restore — the gain survives closing and reopening a project, and corrupt data can't crash it
-- [x] Automated tests — `cmake --build build --target check`, run on every push
-- [x] A real GUI — a resizable knob editor in the Maxximum Displacement brand look, two-way bound to the parameter, tested without a screen
+- [x] Sample-accurate gain smoothing (no zipper noise): biggest per-sample gain step down 960× in testing
+- [x] State save/restore: the gain survives closing and reopening a project, and corrupt data can't crash it
+- [x] Automated tests: `cmake --build build --target check`, run on every push
+- [x] A real GUI: a resizable knob editor in the Maxximum Displacement brand look, two-way bound to the parameter, tested without a screen
 - [x] Universal binary (Apple Silicon + Intel), packaged as a zip with `scripts/package-mac.sh`
 - [ ] Signed and notarised installer (needs an Apple Developer ID)
 
-<div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
+<div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>
 
 ---
 
 ## Built with Claude AI
 
-Full disclosure: I'm building this in collaboration with [Claude](https://claude.ai) —
-Anthropic's AI assistant. It's writing code alongside me, explaining the C++ and JUCE concepts
-as we go and I'm reviewing and steering every step of it.
+Full disclosure: I'm building this in collaboration with [Claude](https://claude.ai),
+Anthropic's AI assistant. I'm designing, reviewing and steering every step and Claude is writing code alongside me, explaining the C++ and JUCE concepts
+as we go and speeding up development time.
 
-<div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
+<div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>
 
 ---
 
 ## Contributing
 
-Spotted a bug or a better way to do something? I'd love to know —
-no software is 100% perfect, but I strive to get as close as possible 🙂
+Spotted a bug or a better way to do something? I'd love to know. No software is 100% perfect, but
+I strive to get as close as possible 🙂
 
-- **Comment on a line, open an issue or a PR**
+- **Comment on a line, open an [issue](https://github.com/milliedavidson/simply-gain/issues) or a PR**
 
-<div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
-
----
-
-## License
-
-Simply Gain's own source code is licensed under the [MIT License](LICENSE).
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-> **Fonts:** the plugin embeds [Inter](https://github.com/rsms/inter),
-> [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) and
-> [Sora](https://github.com/sora-xor/sora-font), all under the SIL Open Font License 1.1. Their
-> licences are in [`assets/fonts/`](assets/fonts/).
-
-> **Note:** JUCE itself (vendored as a submodule at `libs/JUCE`) is **not** covered by this
-> licence — it's dual-licensed under AGPLv3 or Avid's commercial JUCE licence. See
-> [`libs/JUCE/LICENSE.md`](libs/JUCE/LICENSE.md) for the terms that apply to JUCE itself.
+<div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>
 
 ---
 
-```text
-MIT License
+## Licence
 
-Copyright (c) 2026 Maxximum Displacement
+| What                                | Licence                                                                                                                                      |
+|-------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| Simply Gain's own source code       | [MIT](LICENSE)                                                                                                                               |
+| JUCE, the framework it's built on   | [AGPLv3](https://www.gnu.org/licenses/agpl-3.0.en.html) (JUCE is dual-licensed with a commercial licence; this project uses the AGPLv3 side) |
+| The finished plugin you download    | Includes JUCE, so it's distributed under the **AGPLv3**: the complete source is this repository                                              |
+| Inter, JetBrains Mono, Sora (fonts) | [SIL Open Font License 1.1](assets/fonts/)                                                                                                   |
+| VST3 SDK and Audio Unit SDK         | MIT and Apache 2.0, with their notices in the download's `Licences` folder                                                                   |
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software
-and associated documentation files (the "Software"), to deal in the Software without
-restriction, including without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
-Software is furnished to do so, subject to the following conditions:
+In plain words: you're free to use the plugin and to read, fork and learn from the code. My own
+code is MIT, so you can reuse it freely. If you build on it or share the compiled plugin, JUCE's
+AGPLv3 terms apply to the result: see [`libs/JUCE/LICENSE.md`](libs/JUCE/LICENSE.md). The names
+"Simply Gain" and "Maxximum Displacement" are not covered by any of these licences.
 
-The above copyright notice and this permission notice shall be included in all copies or
-substantial portions of the Software.
+---
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
+<p align="center"><code>SIMPLY GAIN // maxximum displacement</code></p>
 
-<div align="right">[ <a href="#an-overview">↑ Back to top ↑</a> ]</div>
+<div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>
