@@ -13,11 +13,13 @@
 
 <p align="center">
   <a href="https://github.com/milliedavidson/simply-gain/releases/latest"><img alt="Download for macOS" src="https://img.shields.io/badge/DOWNLOAD-for%20macOS-F2A766?style=for-the-badge&labelColor=F2A766&logo=apple&logoColor=121417"></a>
+  <a href="https://github.com/milliedavidson/simply-gain/releases/latest"><img alt="Download for Windows" src="https://img.shields.io/badge/DOWNLOAD-for%20Windows-F2A766?style=for-the-badge&labelColor=F2A766&logoColor=121417"></a>
+  <a href="https://github.com/milliedavidson/simply-gain/releases/latest"><img alt="Download for Linux" src="https://img.shields.io/badge/DOWNLOAD-for%20Linux-F2A766?style=for-the-badge&labelColor=F2A766&logo=linux&logoColor=121417"></a>
 </p>
 
 <p align="center">
-  <img alt="Formats: AU, VST3" src="https://img.shields.io/badge/formats-AU%20%C2%B7%20VST3-2A2E34?style=flat-square&labelColor=1B1E22">
-  <img alt="macOS 11 or later, Intel and Apple Silicon" src="https://img.shields.io/badge/macOS-11%2B%20%C2%B7%20Intel%20%26%20Apple%20Silicon-2A2E34?style=flat-square&labelColor=1B1E22&logo=apple&logoColor=E8EAED">
+  <img alt="Formats: AU, VST3, Standalone" src="https://img.shields.io/badge/formats-AU%20%C2%B7%20VST3%20%C2%B7%20Standalone-2A2E34?style=flat-square&labelColor=1B1E22">
+  <img alt="Platforms: macOS, Windows, Linux" src="https://img.shields.io/badge/platforms-macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-2A2E34?style=flat-square&labelColor=1B1E22">
   <img alt="AU validated with auval" src="https://img.shields.io/badge/AU-auval%20passed-2A2E34?style=flat-square&labelColor=1B1E22">
   <img alt="Built with JUCE 8, C++17, CMake" src="https://img.shields.io/badge/JUCE%208%20%C2%B7%20C%2B%2B17%20%C2%B7%20CMake-2A2E34?style=flat-square&labelColor=1B1E22">
   <img alt="Free" src="https://img.shields.io/badge/price-free-2A2E34?style=flat-square&labelColor=1B1E22">
@@ -30,33 +32,43 @@
 **Simply Gain is a free volume knob for your DAW.** Put it on a track, a bus or your whole mix and
 turn the ring. That's the whole plugin.
 
-It runs on **macOS 11 or later**, on both Intel and Apple Silicon Macs, as an **Audio Unit**
-(Logic Pro, GarageBand) and a **VST3** (Ableton Live, Reaper and most other DAWs). There's no
-Windows or Linux build yet.
+It runs on **macOS, Windows and Linux**, as a **VST3** in Ableton Live, Reaper and most other DAWs,
+and as an **Audio Unit** in Logic Pro and GarageBand on the Mac.
 
 ### 1. Download
 
-Grab the latest **`simply-gain-<version>-mac.zip`** from the
-[**Releases page**](https://github.com/milliedavidson/simply-gain/releases/latest) (look under
-**Assets**) and unzip it. Inside you'll find the two plugins, a short installation note and the
-licences.
+Go to the [**Releases page**](https://github.com/milliedavidson/simply-gain/releases/latest), find
+the file for your system under **Assets**, and download it.
 
-### 2. Copy it where your DAW looks
+| Your system                                   | Download                             | What's inside             |
+|-----------------------------------------------|--------------------------------------|---------------------------|
+| **macOS** 11 or later, Intel or Apple Silicon | `simply-gain-<version>-mac.zip`      | Audio Unit and VST3       |
+| **Windows** 10 or later, 64-bit               | `simply-gain-<version>-windows.zip`  | VST3 and a standalone app |
+| **Linux**, 64-bit Intel/AMD                   | `simply-gain-<version>-linux.tar.gz` | VST3 and a standalone app |
 
-In Finder choose **Go → Go to Folder…** (`⇧⌘G`), paste the folder for your DAW and press Return,
-then drag the plugin in.
+Each download also has a short installation note and the licences. The Mac version is the one I
+build and test myself. The Windows and Linux versions are built automatically by GitHub, so if
+something's off on your machine, please [tell me](https://github.com/milliedavidson/simply-gain/issues).
+
+### 2. Install it
+
+<details open>
+<summary><b>macOS</b></summary>
+
+<br>
+
+**Copy it where your DAW looks.** Unzip, then in Finder choose **Go → Go to Folder…** (`⇧⌘G`),
+paste the folder for your DAW and press Return, and drag the plugin in.
 
 | Your DAW                             | Plugin to copy          | Folder to paste                       |
 |--------------------------------------|-------------------------|---------------------------------------|
 | **Logic Pro**, **GarageBand**        | `simply gain.component` | `~/Library/Audio/Plug-Ins/Components` |
 | **Ableton Live**, **Reaper**, others | `simply gain.vst3`      | `~/Library/Audio/Plug-Ins/VST3`       |
 
-### 3. Tell macOS it's safe
-
-macOS blocks plugins downloaded from the internet unless Apple has checked them and Simply Gain
-hasn't been through that yet (it needs a paid Apple Developer ID, which is on the
-[to-do list](#status)). Open **Terminal** (Applications → Utilities), paste the line for the plugin
-you copied, and press Return. Nothing is printed when it works.
+**Tell macOS it's safe.** macOS blocks plugins downloaded from the internet unless Apple has
+checked them. Simply Gain hasn't been through that yet (it needs a paid Apple Developer ID, which
+is on the [to-do list](#status)). Open **Terminal** (Applications → Utilities), paste the line for
+the plugin you copied, and press Return. Nothing is printed when it works.
 
 ```bash
 # Audio Unit
@@ -69,7 +81,58 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"simply gain.vst3"
 > The command only removes the "downloaded from the internet" flag from that one plugin. If you'd
 > rather not trust a download, [build it yourself](#build-from-source): the whole source is here.
 
-### 4. Open your DAW
+</details>
+
+<details>
+<summary><b>Windows</b></summary>
+
+<br>
+
+**Unblock the zip first.** Windows marks files from the internet as untrusted and passes that on to
+everything inside a zip. Right-click the `.zip`, choose **Properties**, tick **Unblock** at the
+bottom of the General tab, click **OK**, and then unzip it. (No Unblock box? Then it's already fine.)
+
+**Copy the plugin.** Copy the whole `simply gain.vst3` folder into:
+
+```text
+C:\Program Files\Common Files\VST3
+```
+
+Windows will ask for permission to copy there. Choose **Continue**.
+
+**The standalone app** needs no installing: double-click `simply gain.exe`. Windows may say
+"Windows protected your computer", because the app isn't signed with a paid certificate yet. Click
+**More info**, then **Run anyway**.
+
+</details>
+
+<details>
+<summary><b>Linux</b></summary>
+
+<br>
+
+Built on Ubuntu 22.04, so most distributions from 2022 onwards should run it. On an older one,
+[build it from source](#build-from-source).
+
+**Copy the plugin.** Extract the archive, open a terminal in the new folder and run:
+
+```bash
+mkdir -p ~/.vst3
+cp -r "simply gain.vst3" ~/.vst3/
+```
+
+To install it for every user instead, copy the folder into `/usr/lib/vst3` with `sudo`.
+
+**The standalone app** needs no installing. In the same folder:
+
+```bash
+chmod +x "simply gain"
+./"simply gain"
+```
+
+</details>
+
+### 3. Open your DAW
 
 - **Logic Pro** checks new plugins as it starts. Find it in any channel strip's **Audio FX** slot
   under **Audio Units → Maxximum Displacement → simply gain**.
@@ -81,11 +144,14 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"simply gain.vst3"
 
 <br>
 
-- Check step 3 was done for the plugin your DAW is using.
-- In Logic, open **Logic Pro → Settings → Plug-in Manager**, select **simply gain** and click
+- **macOS:** check you ran the `xattr` line for the plugin your DAW is using. In Logic, open
+  **Logic Pro → Settings → Plug-in Manager**, select **simply gain** and click
   **Reset & Rescan Selection**.
+- **Windows:** check you copied the whole `simply gain.vst3` folder, and that you unblocked the zip
+  before unzipping it.
+- **Linux:** check the folder is at `~/.vst3/simply gain.vst3` and that your DAW scans `~/.vst3`.
 - Still stuck? [Open an issue](https://github.com/milliedavidson/simply-gain/issues) and tell me
-  your DAW and macOS version.
+  your DAW and operating system version.
 
 </details>
 
@@ -172,13 +238,31 @@ cmake --build build --target SimpleGain_Standalone -j 8
 The first configure builds JUCE's `juceaide` helper tool and takes about 90 seconds. After that,
 builds are incremental.
 
+**On Windows or Linux?** The same CMake commands work, with a few differences:
+
+- **Windows:** you need Visual Studio 2022 with the "Desktop development with C++" workload.
+  Add `--config Release` (or `Debug`) to the build command, because Visual Studio picks the
+  configuration at build time.
+- **Linux:** you need a compiler, CMake and JUCE's development libraries. On Ubuntu or Debian:
+
+```bash
+sudo apt-get install build-essential cmake libasound2-dev libfreetype-dev libfontconfig1-dev \
+  libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev \
+  libxrender-dev libglu1-mesa-dev mesa-common-dev
+```
+
+- **Both:** the AU format is macOS-only, so build `SimpleGain_VST3` instead of `SimpleGain_AU`.
+
 ### 3. Run it
 
 ```bash
 open "build/SimpleGain_artefacts/Debug/Standalone/simply gain.app"
 ```
 
-The Standalone build is the fast development loop: a real `.app` you can run without a DAW, with
+That's the Mac command. On Windows run `simply gain.exe` from the same `Standalone` folder, and on
+Linux run `simply gain`.
+
+The Standalone build is the fast development loop: a real app you can run without a DAW, with
 its own Audio/MIDI settings (**Options → Audio/MIDI Settings**) for picking an input and output
 device.
 
@@ -216,6 +300,10 @@ macOS 11 and later, with an install note. That's the file attached to each
 [release](https://github.com/milliedavidson/simply-gain/releases). It isn't signed with an Apple
 Developer ID yet, which is why the install note includes one Terminal command. See
 [Identity & macOS §6](documentation/plugin-identity-and-macos.md#6-sending-it-to-someone-universal-builds-signing-and-gatekeeper).
+
+The Windows and Linux downloads aren't built by hand. When a release is published, a GitHub Actions
+workflow builds both and attaches them to it. See
+[CI & GitHub Actions §4](documentation/ci-and-github-actions.md#4-the-release-builds-windows-and-linux).
 
 <div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>
 
@@ -268,6 +356,7 @@ and run.
 - [x] Automated tests: `cmake --build build --target check`, run on every push
 - [x] A real GUI: a resizable knob editor in the Maxximum Displacement brand look, two-way bound to the parameter, tested without a screen
 - [x] Universal binary (Apple Silicon + Intel), packaged as a zip with `scripts/package-mac.sh`
+- [ ] Windows and Linux downloads: built by GitHub Actions when a release is published, not yet run in a DAW
 - [ ] Signed and notarised installer (needs an Apple Developer ID)
 
 <div align="right">[ <a href="#quick-start">↑ Back to top ↑</a> ]</div>

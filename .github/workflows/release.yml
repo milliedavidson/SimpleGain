@@ -1,0 +1,92 @@
+# =============================================================================
+#  Build the Windows and Linux downloads, and attach them to a release.
+# =============================================================================
+#  The Mac zip is made by hand with scripts/package-mac.sh. This workflow makes the other two,
+#  because there's no Windows or Linux machine to build them on locally.
+#
+#  Two ways to run it:
+#    1. Publish a release on GitHub. The zips are built and attached to that release.
+#    2. Actions tab > "Release builds" > Run workflow. With the tag box left empty it only builds,
+#       and the zips are kept as workflow artefacts to download and try. With a tag it also
+#       attaches them to that release.
+#  Why each step: documentation/ci-and-github-actions.md section 4
+# =============================================================================
+
+name: Release builds
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach the builds to (leave empty to only build)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false                   # if Windows breaks, still get the Linux result
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: ubuntu-22.04             # an older Ubuntu on purpose: it runs on more Linux systems
+            platform: linux
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out Simply Gain (with the JUCE submodule)
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install JUCE's Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libfreetype-dev libfontconfig1-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev \
+            libxrandr-dev libxrender-dev libglu1-mesa-dev mesa-common-dev
+
+      - name: Configure
+        run: cmake -B build-release -DCMAKE_BUILD_TYPE=Release -DSIMPLEGAIN_INSTALL_AFTER_BUILD=OFF
+
+      - name: Build the VST3 and the standalone app
+        # --config matters on Windows, where Visual Studio picks Debug or Release at build time.
+        run: cmake --build build-release --config Release --target SimpleGain_VST3 SimpleGain_Standalone -j 4
+
+      - name: Package
+        shell: bash
+        run: scripts/package-other.sh ${{ matrix.platform }}
+
+      - name: Keep the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: simply-gain-${{ matrix.platform }}
+          path: dist/simply-gain-*
+          if-no-files-found: error
+
+  attach:
+    needs: build
+    # Only when there's a release to attach to.
+    if: github.event_name == 'release' || inputs.tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write                    # uploading a release asset needs this
+    steps:
+      - name: Download the packages
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Attach them to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: gh release upload "$TAG" dist/simply-gain-* --clobber --repo "$GITHUB_REPOSITORY"
