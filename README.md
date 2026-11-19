@@ -12,9 +12,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/milliedavidson/simply-gain/releases/latest"><img alt="Download for macOS" src="https://img.shields.io/badge/DOWNLOAD-for%20macOS-F2A766?style=for-the-badge&labelColor=F2A766&logo=apple&logoColor=121417"></a>
-  <a href="https://github.com/milliedavidson/simply-gain/releases/latest"><img alt="Download for Windows" src="https://img.shields.io/badge/DOWNLOAD-for%20Windows-F2A766?style=for-the-badge&labelColor=F2A766&logoColor=121417"></a>
-  <a href="https://github.com/milliedavidson/simply-gain/releases/latest"><img alt="Download for Linux" src="https://img.shields.io/badge/DOWNLOAD-for%20Linux-F2A766?style=for-the-badge&labelColor=F2A766&logo=linux&logoColor=121417"></a>
+  <a href="https://github.com/milliedavidson/simply-gain/releases/latest/download/simply-gain-0.1.0-mac.zip"><img alt="Download for macOS" src="https://img.shields.io/badge/DOWNLOAD-for%20macOS-F2A766?style=for-the-badge&labelColor=F2A766&logo=apple&logoColor=121417"></a>
+  <a href="https://github.com/milliedavidson/simply-gain/releases/latest/download/simply-gain-0.1.0-windows.zip"><img alt="Download for Windows" src="https://img.shields.io/badge/DOWNLOAD-for%20Windows-F2A766?style=for-the-badge&labelColor=F2A766&logoColor=121417"></a>
+  <a href="https://github.com/milliedavidson/simply-gain/releases/latest/download/simply-gain-0.1.0-linux.tar.gz"><img alt="Download for Linux" src="https://img.shields.io/badge/DOWNLOAD-for%20Linux-F2A766?style=for-the-badge&labelColor=F2A766&logo=linux&logoColor=121417"></a>
+  <br>
+  <a href="https://github.com/milliedavidson/simply-gain/releases/latest"><img alt="Release notes" src="https://img.shields.io/badge/RELEASE-NOTES-2A2E34?style=for-the-badge&labelColor=2A2E34&logo=github&logoColor=F2A766"></a>
 </p>
 
 <p align="center">
@@ -40,11 +42,11 @@ and as an **Audio Unit** in Logic Pro and GarageBand on the Mac.
 Go to the [**Releases page**](https://github.com/milliedavidson/simply-gain/releases/latest), find
 the file for your system under **Assets**, and download it.
 
-| Your system                                   | Download                             | What's inside             |
-|-----------------------------------------------|--------------------------------------|---------------------------|
-| **macOS** 11 or later, Intel or Apple Silicon | `simply-gain-<version>-mac.zip`      | Audio Unit and VST3       |
-| **Windows** 10 or later, 64-bit               | `simply-gain-<version>-windows.zip`  | VST3 and a standalone app |
-| **Linux**, 64-bit Intel/AMD                   | `simply-gain-<version>-linux.tar.gz` | VST3 and a standalone app |
+| Your system                                   | Download                                                                                                                                  | What's inside             |
+|-----------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|
+| **macOS** 11 or later, Intel or Apple Silicon | [`simply-gain-0.1.0-mac.zip`](https://github.com/milliedavidson/simply-gain/releases/latest/download/simply-gain-0.1.0-mac.zip)           | Audio Unit and VST3       |
+| **Windows** 10 or later, 64-bit               | [`simply-gain-0.1.0-windows.zip`](https://github.com/milliedavidson/simply-gain/releases/latest/download/simply-gain-0.1.0-windows.zip)   | VST3 and a standalone app |
+| **Linux**, 64-bit Intel/AMD                   | [`simply-gain-0.1.0-linux.tar.gz`](https://github.com/milliedavidson/simply-gain/releases/latest/download/simply-gain-0.1.0-linux.tar.gz) | VST3 and a standalone app |
 
 Each download also has a short installation note and the licences. The Mac version is the one I
 build and test myself. The Windows and Linux versions are built automatically by GitHub, so if
