@@ -15,6 +15,8 @@
   <a href="https://github.com/milliedavidson/simply-gain/releases/latest/download/simply-gain-0.1.0-mac.zip"><img alt="Download for macOS" src="https://img.shields.io/badge/DOWNLOAD-for%20macOS-F2A766?style=for-the-badge&labelColor=F2A766&logo=apple&logoColor=121417"></a>
   <a href="https://github.com/milliedavidson/simply-gain/releases/latest/download/simply-gain-0.1.0-windows.zip"><img alt="Download for Windows" src="https://img.shields.io/badge/DOWNLOAD-for%20Windows-F2A766?style=for-the-badge&labelColor=F2A766&logoColor=121417"></a>
   <a href="https://github.com/milliedavidson/simply-gain/releases/latest/download/simply-gain-0.1.0-linux.tar.gz"><img alt="Download for Linux" src="https://img.shields.io/badge/DOWNLOAD-for%20Linux-F2A766?style=for-the-badge&labelColor=F2A766&logo=linux&logoColor=121417"></a>
+  <br>
+  <a href="https://github.com/milliedavidson/simply-gain/releases/latest"><img alt="Release notes" src="https://img.shields.io/badge/RELEASE-NOTES-2A2E34?style=for-the-badge&labelColor=2A2E34&logo=github&logoColor=F2A766"></a>
 </p>
 
 <p align="center">
