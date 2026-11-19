@@ -1,0 +1,55 @@
+simply gain, a free gain plugin by maxximum displacement
+=========================================================
+
+What's in this folder
+---------------------
+  simply gain.vst3    the VST3 plugin, for Ableton Live, Reaper, FL Studio and most other DAWs
+  simply gain.exe     the standalone app, to try it without a DAW
+  Licences            the licences for the plugin, its fonts and its libraries
+
+It works on 64-bit Windows 10 or later.
+
+
+Before you unzip (30 seconds)
+-----------------------------
+Windows marks files from the internet as untrusted, and passes that on to everything inside a zip.
+Unblock the zip first:
+
+1. Right-click the .zip file and choose Properties.
+2. At the bottom of the General tab, tick "Unblock", then click OK.
+3. Now unzip it.
+
+(If you can't see "Unblock", the file is already fine.)
+
+
+Installing the plugin (about two minutes)
+-----------------------------------------
+1. Quit your DAW.
+
+2. Copy the whole "simply gain.vst3" folder into:
+
+       C:\Program Files\Common Files\VST3
+
+   Windows will ask for permission to copy there. Choose Continue.
+
+3. Open your DAW and rescan your plugins if it doesn't show up straight away.
+   You'll find it under "Maxximum Displacement".
+
+
+The standalone app
+------------------
+Double-click "simply gain.exe". It has its own Audio settings under Options.
+
+Windows may say "Windows protected your computer", because this app hasn't been
+signed with a paid certificate yet. Click "More info", then "Run anyway".
+
+
+If it doesn't appear
+--------------------
+Check you copied the whole "simply gain.vst3" folder, not just something inside it, and
+that you unblocked the zip before unzipping. Then rescan plugins in your DAW.
+
+
+Source code
+-----------
+simply gain is open source: https://github.com/milliedavidson/simply-gain

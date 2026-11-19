@@ -1,0 +1,47 @@
+simply gain, a free gain plugin by maxximum displacement
+=========================================================
+
+What's in this folder
+---------------------
+  simply gain.vst3    the VST3 plugin, for Reaper, Bitwig, Ardour and other DAWs that load VST3
+  simply gain         the standalone app, to try it without a DAW
+  Licences            the licences for the plugin, its fonts and its libraries
+
+It works on 64-bit Intel/AMD Linux. It was built on Ubuntu 22.04, so most distributions from
+2022 onwards should run it. On an older or unusual one, build it from the source instead.
+
+
+Installing the plugin (about a minute)
+--------------------------------------
+1. Quit your DAW.
+
+2. Open a terminal in this folder and run:
+
+       mkdir -p ~/.vst3
+       cp -r "simply gain.vst3" ~/.vst3/
+
+3. Open your DAW and rescan your plugins if it doesn't show up straight away.
+   You'll find it under "Maxximum Displacement".
+
+To install it for every user instead, copy the folder into /usr/lib/vst3 with sudo.
+
+
+The standalone app
+------------------
+In a terminal, in this folder:
+
+       chmod +x "simply gain"
+       ./"simply gain"
+
+It has its own Audio settings under Options. It needs ALSA (or JACK) sound, which almost every
+desktop already has.
+
+
+If it doesn't appear
+--------------------
+Check the folder is at ~/.vst3/"simply gain.vst3" and that your DAW scans ~/.vst3. Then rescan.
+
+
+Source code
+-----------
+simply gain is open source: https://github.com/milliedavidson/simply-gain

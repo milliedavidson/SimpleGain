@@ -23,6 +23,8 @@ on every push.
   a hard failure rather than a warning.
 - A pipeline isn't a simulation — it's **your real build on a borrowed, blank machine**, run
   automatically on every push and PR.
+- A second workflow, `release.yml`, **builds the Windows and Linux downloads** when a release is
+  published, because there's no Windows or Linux machine to build them on locally.
 
 ---
 
@@ -168,3 +170,44 @@ on.) The real value is three things a local Terminal can't give you:
 the build-and-verify step continuously, on every change, rather than manually and occasionally.
 It's the same idea as `dotnet test` in a build pipeline, just applied to something with a real
 hardware target (`auval`) instead of only unit tests.
+
+---
+
+## 4. The release builds: Windows and Linux
+
+The first workflow only runs on a Mac, because the AU format and `auval` only exist there. But
+people on Windows and Linux want a download too, and there's no Windows or Linux machine here to
+build one on. A GitHub runner is a free blank machine of either kind, so
+`.github/workflows/release.yml` borrows them.
+
+**When it runs.** Two ways:
+
+1. **You publish a release on GitHub.** The workflow builds both zips and attaches them to that
+   release a few minutes later.
+2. **You start it by hand** from the Actions tab (**Release builds → Run workflow**). With the tag
+   box empty it only builds, and keeps the zips as downloadable workflow artefacts. That's the safe
+   way to try it before a real release. With a tag, it also attaches them.
+
+**What it does.**
+
+- **Two jobs in parallel**, one per system, from a *matrix*. It's the same job body run twice
+  with different values, a bit like a `foreach` over `[windows, linux]`. `fail-fast: false` means
+  a Windows failure doesn't cancel the Linux build.
+- **Linux installs JUCE's dependencies first.** JUCE draws its window with X11 and plays sound
+  through ALSA, so a blank Ubuntu needs their development packages before the build can link.
+- **Windows needs `--config Release` on the build line.** Visual Studio is a *multi-config*
+  generator: the Debug-or-Release choice is made at build time, not at configure time, so
+  `-DCMAKE_BUILD_TYPE` is ignored there.
+- **`scripts/package-other.sh` makes the archive.** It gathers the VST3, the standalone app, the
+  install note and the licences, then uses `cmake -E tar` so one command makes a zip on Windows
+  and a `.tar.gz` on Linux with no extra tools.
+- **A second job attaches the files** with `gh release upload`. It's the only one given permission
+  to write to the release, and it runs only when there's a release to write to.
+
+**Why it waits for a published release.** A draft release has no tag yet, and `gh release upload`
+looks releases up by tag. So the order is: create the release as a draft, check it, publish it, and
+the Windows and Linux files appear on it shortly afterwards.
+
+**What it doesn't do.** It doesn't sign anything. Windows shows a SmartScreen warning for the
+standalone app, and the install note says how to get past it. It also can't tell you the plugin
+*works* in a Windows or Linux DAW, only that it builds. That check is still a person with a DAW.
